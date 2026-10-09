@@ -1,0 +1,16 @@
+{
+  "name": "mcat-nexus",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build tools for the MCAT Nexus concept map: precomputed layout and page checks.",
+  "scripts": {
+    "layout": "node tools/layout.mjs",
+    "build": "python3 build.py",
+    "check-page": "node tools/check-page.mjs"
+  },
+  "devDependencies": {
+    "cytoscape": "3.30.2",
+    "cytoscape-fcose": "2.2.0",
+    "playwright": "1.56.0"
+  }
+}
