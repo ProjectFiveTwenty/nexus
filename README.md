@@ -1,2 +1,2 @@
 # nexus
-a concept nexus for MCAT prep
+A concept map of MCAT topics designed to facilitate interleaving and 
