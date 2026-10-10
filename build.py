@@ -4,6 +4,13 @@
 Usage:  python3 build.py              validate, refresh the layout if needed, write mcat-web.html
         python3 build.py --check      validate only
         python3 build.py --relayout   rerun the layout even if the graph has not changed
+        python3 build.py --curated=PATH   read the curated interleave table from PATH
+                                          (or set NEXUS_CURATED=PATH; default data/interleave_curated.json)
+        python3 build.py --out=PATH   write the page somewhere other than mcat-web.html
+
+Interleaving data: data/hub_members.json and data/interleave_candidates.json (written by
+tools/interleave.py) plus the optional curated table are inlined next to the graph. The page
+shows each hub's five partners; hubs missing from the curated table use the candidates.
 
 Positions come from data/positions.json, written by `node tools/layout.mjs`. The file
 stores a hash of the live concepts and links. When the hash no longer matches and
@@ -13,6 +20,7 @@ their parent.
 """
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -208,6 +216,89 @@ def refresh_layout(nodes, edges, force=False):
     return positions
 
 
+def arg_value(name):
+    for a in sys.argv[1:]:
+        if a.startswith(name + "="):
+            return a.split("=", 1)[1]
+    return None
+
+
+def load_optional(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError) as exc:
+        print(f"warning: could not read {path}: {exc}")
+        return None
+
+
+def interleave_payload(nodes, edges):
+    """Hub membership plus five interleave partners per hub, trimmed for the page.
+
+    Shape: {"hubOf": {concept: hub}, "cur": {hub: [[partner, why, [[a, b], ...]], ...]},
+            "cand": {hub: [[partner, [[a, b], ...]], ...]}}
+    "cur" comes from the curated table (optional). "cand" holds the top candidates from
+    tools/interleave.py; the page uses them for hubs the curated table does not cover yet.
+    Prompt/answer fields in the curated table are ignored.
+    """
+    live = {n["id"]: n for n in nodes}
+    hubs = {i for i, n in live.items() if n.get("hub")}
+
+    members = load_optional(ROOT / "data" / "hub_members.json") or {}
+    hub_of = {c: h for c, h in members.items() if c in live and h in hubs and c != h}
+    if not members:
+        print("note: data/hub_members.json missing; the page maps concepts to their top ancestor")
+
+    def pairs_of(raw):
+        out = []
+        for p in raw or []:
+            if isinstance(p, dict):
+                p = [p.get("s"), p.get("t")]
+            if isinstance(p, list) and len(p) == 2 and p[0] in live and p[1] in live:
+                out.append([p[0], p[1]])
+        return out
+
+    cand = {}
+    raw = load_optional(ROOT / "data" / "interleave_candidates.json") or {}
+    if not raw:
+        print("note: data/interleave_candidates.json missing; run python3 tools/interleave.py")
+    for h, lst in raw.items():
+        if h not in hubs or not isinstance(lst, list):
+            continue
+        rows = [c for c in lst if isinstance(c, dict) and c.get("hub") in hubs and c.get("hub") != h]
+        rows.sort(key=lambda c: -float(c.get("score", 0) or 0))
+        cand[h] = [[c["hub"], pairs_of(c.get("bridges"))[:4]] for c in rows[:8]]
+
+    cur_path = arg_value("--curated") or os.environ.get("NEXUS_CURATED") or str(ROOT / "data" / "interleave_curated.json")
+    raw_cur = load_optional(cur_path)
+    curated = {}
+    if isinstance(raw_cur, dict):
+        dropped = 0
+        for h, lst in raw_cur.items():
+            if h not in hubs or not isinstance(lst, list):
+                dropped += 1
+                continue
+            rows, seen = [], set()
+            for c in lst:
+                if not isinstance(c, dict) or c.get("hub") not in hubs or c.get("hub") == h or c.get("hub") in seen:
+                    dropped += 1
+                    continue
+                seen.add(c["hub"])
+                rows.append([c["hub"], str(c.get("why") or ""), pairs_of(c.get("bridges"))[:4]])
+            if rows:
+                curated[h] = rows[:5]
+        print(f"interleave: curated table from {cur_path}: {len(curated)} of {len(hubs)} hubs" +
+              (f", {dropped} entries dropped" if dropped else ""))
+    else:
+        print("interleave: no curated table; every hub uses link-analysis suggestions")
+    fallback = sorted(h for h in hubs if h not in curated)
+    if fallback:
+        print(f"interleave: {len(fallback)} hub(s) fall back to link analysis: {fallback[:12]}" + (" ..." if len(fallback) > 12 else ""))
+    return {"hubOf": hub_of, "cur": curated, "cand": cand}
+
+
 def main():
     nodes, edges = load("nodes.json"), load("edges.json")
     errors, warnings, stats = validate(nodes, edges)
@@ -233,11 +324,14 @@ def main():
         print(f"note: {missing} concept(s) have no stored position; the page places them near their parent")
 
     template = (ROOT / "viewer.template.html").read_text(encoding="utf-8")
-    payload = json.dumps({"nodes": nodes, "edges": edges, "pos": pos}, ensure_ascii=False, separators=(",", ":"))
+    data = {"nodes": nodes, "edges": edges, "pos": pos}
+    data["il"] = interleave_payload(nodes, edges)
+    payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
     payload = payload.replace("</", "<\\/")
     out = template.replace("/*__GRAPH_DATA__*/null", payload)
-    (ROOT / "mcat-web.html").write_text(out, encoding="utf-8")
-    print(f"\nWrote mcat-web.html ({len(out) // 1024} KB)")
+    dest = Path(arg_value("--out") or ROOT / "mcat-web.html")
+    dest.write_text(out, encoding="utf-8")
+    print(f"\nWrote {dest.name} ({len(out) // 1024} KB)")
 
 
 if __name__ == "__main__":

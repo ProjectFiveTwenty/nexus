@@ -1,4 +1,5 @@
-<title>MCAT Nexus</title>
+<meta charset="utf-8">
+<title>PROJECT520 Nexus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -20,6 +21,8 @@
   --edge: #8795a5;
   --trap-bg: #fff3dc;
   --trap-ink: #5e3b00;
+  --il: #c8326b;
+  --il-ink: #ffffff;
   --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
   --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -40,6 +43,8 @@
     --edge: #5d6c7c;
     --trap-bg: #2a2112;
     --trap-ink: #f1c982;
+  --il: #ff7aa8;
+  --il-ink: #0d1218;
     color-scheme: dark;
   }
 }
@@ -58,6 +63,8 @@
   --edge: #5d6c7c;
   --trap-bg: #2a2112;
   --trap-ink: #f1c982;
+  --il: #ff7aa8;
+  --il-ink: #0d1218;
   color-scheme: dark;
 }
 
@@ -125,6 +132,8 @@ button, input { font: inherit; color: inherit; }
 }
 .canvas { position: relative; min-width: 0; min-height: 0; }
 #cy { position: absolute; inset: 0; }
+/* Topic territories: a canvas under the graph that paints each hub's soft region. */
+#terr { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .tools { position: absolute; left: 12px; top: 12px; display: flex; flex-wrap: wrap; gap: 8px; z-index: 5; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
 .seg span { padding: 5px 9px; font: 400 11px/1.6 var(--font-mono); color: var(--muted); align-self: center; }
@@ -180,12 +189,58 @@ button, input { font: inherit; color: inherit; }
 .sym { justify-self: center; border-radius: 50%; }
 .sym.hub { width: 20px; height: 20px; background: var(--bb); border: 2px solid var(--surface); box-shadow: 0 0 0 2px var(--bb); }
 .sym.con { width: 9px; height: 9px; background: var(--bb); }
+.sym.grp {
+  width: 28px; height: 20px; border-radius: 10px;
+  background:
+    radial-gradient(circle at 9px 10px, var(--bb) 0 4.5px, transparent 5px),
+    radial-gradient(circle at 20px 6px, var(--bb) 0 2.5px, transparent 3px),
+    radial-gradient(circle at 19px 14px, var(--bb) 0 2.5px, transparent 3px),
+    color-mix(in srgb, var(--bb) 16%, transparent);
+}
+.sym.mem { width: 10px; height: 10px; background: var(--bb); box-shadow: 0 0 0 4px color-mix(in srgb, var(--bb) 30%, transparent); }
 .secs { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .secs span { display: inline-flex; align-items: center; gap: 6px; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .close { border: 0; background: var(--soft); border-radius: 8px; padding: 4px 10px; cursor: pointer; flex: none; }
 .stats { font: 400 12px var(--font-mono); color: var(--muted); margin-top: 18px; }
 
+/* Interleaving: partner list in the panel, toolbar toggle, legend symbols. --il marks it everywhere. */
+.btn.small { padding: 3px 9px; font-size: 13px; }
+.btn.iltog { display: inline-flex; align-items: center; gap: 7px; }
+.btn.iltog svg { flex: none; }
+.btn.iltog[aria-pressed="true"] { border-color: var(--il); color: var(--il); font-weight: 600; }
+.btn.iltog[aria-pressed="false"] { color: var(--muted); }
+.catchip { display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line); font: 400 11px/1.7 var(--font-mono); color: var(--muted); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.catchip .dot { width: 7px; height: 7px; }
+.panel h3.il-h { color: var(--il); }
+.panel h3.il-h b { font-weight: 500; color: var(--ink); text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 13px; }
+.il-src { font-size: 12px; color: var(--muted); margin: -4px 0 8px; }
+.il-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.il-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 0 10px; padding: 8px 8px 9px 4px; border-radius: 8px; }
+.il-row:hover { background: var(--soft); }
+.il-rank { width: 22px; height: 22px; border-radius: 50%; background: var(--il); color: var(--il-ink); font: 500 12px/22px var(--font-mono); text-align: center; margin-top: 1px; }
+.il-row.off .il-rank { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+.il-head { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px; min-width: 0; }
+.il-name { border: 0; background: transparent; padding: 0; font-weight: 600; cursor: pointer; text-align: left; color: var(--ink); overflow-wrap: anywhere; }
+.il-name:hover { color: var(--il); text-decoration: underline; text-underline-offset: 2px; }
+.il-tag { font: 500 10px/1.6 var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 0 6px; border-radius: 4px; border: 1px dashed var(--line); white-space: nowrap; }
+.il-row .why { margin: 3px 0 0; color: var(--muted); font-size: 13px; max-width: 62ch; }
+.il-row .sug { margin: 2px 0 0; font-size: 11px; color: var(--muted); font-style: italic; }
+.il-tools { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; margin-top: 4px; font-size: 12.5px; }
+.linkbtn { border: 0; background: transparent; padding: 0; cursor: pointer; color: var(--accent); font-weight: 500; font-size: inherit; }
+.linkbtn:hover { text-decoration: underline; }
+.il-how summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+.il-how summary:hover { text-decoration: underline; }
+.il-how[open] { flex-basis: 100%; }
+.bridges { list-style: none; margin: 6px 0 2px; padding: 0; display: grid; gap: 7px; font-size: 13px; }
+.bridges li { padding-left: 10px; border-left: 2px solid var(--il); overflow-wrap: anywhere; }
+.bridges .v { font: 400 12px var(--font-mono); color: var(--muted); }
+.bridges .why { display: block; color: var(--muted); }
+.sym.il { width: 18px; height: 18px; background: var(--ps); border: 2px solid var(--surface); box-shadow: 0 0 0 2px var(--il), 0 0 0 6px color-mix(in srgb, var(--il) 22%, transparent); }
+.sym.ildash { width: 26px; height: 0; border-radius: 0; border-top: 2px dashed var(--il); }
+.sym.ildash.faint { opacity: 0.55; border-top-width: 1.5px; }
+.pair-h { color: var(--muted); font-weight: 600; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
 @media (max-width: 820px) {
   body { padding-inline: 12px; padding-block: 10px; }
   .app { gap: 10px; }
@@ -203,13 +258,17 @@ button, input { font: inherit; color: inherit; }
   .tools .btn, .seg button { padding: 4px 9px; }
   .panel h2 { font-size: 21px; }
 }
+@media (max-width: 480px) {
+  .brand { display: block; }
+  .brand small { margin-top: 5px; }
+}
 @media (min-width: 821px) { .close.mobile-only { display: none; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 </style>
 
-<div class="app">
+<div class="app" id="app">
   <header class="bar">
-    <div class="brand">MCAT Nexus<small id="counts"></small></div>
+    <div class="brand">PROJECT520 Nexus</div>
     <div class="search">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14" stroke-linecap="round"/></svg>
       <input id="q" type="search" placeholder="Search concepts  ( / )" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="results" aria-autocomplete="list" aria-label="Search concepts">
@@ -222,17 +281,14 @@ button, input { font: inherit; color: inherit; }
 
   <main class="stage empty" id="stage">
     <div class="canvas">
+      <canvas id="terr" aria-hidden="true"></canvas>
       <div id="cy" aria-label="Interactive concept map"></div>
       <div class="tools">
-        <div class="seg" role="group" aria-label="Neighborhood depth"><span>Depth</span>
-          <button type="button" data-hops="1" aria-pressed="true">1</button>
-          <button type="button" data-hops="2" aria-pressed="false">2</button>
-          <button type="button" data-hops="3" aria-pressed="false">3</button>
-        </div>
         <button type="button" class="btn" id="fit">Fit all</button>
         <button type="button" class="btn" id="reset">Clear focus</button>
+        <button type="button" class="btn iltog" id="iltog" aria-pressed="true" title="Show interleaving partners on the map"><svg width="18" height="8" viewBox="0 0 18 8" aria-hidden="true"><path d="M1 6.5 C 5 0.5, 13 0.5, 17 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3 2.4" stroke-linecap="round"/></svg>Interleaving</button>
       </div>
-      <div class="hint" id="hint">Click a concept to focus it. Scroll to zoom, drag to pan.</div>
+      <div class="hint" id="hint">Point at a topic to see what belongs to it. Click to focus. Scroll to zoom.</div>
     </div>
     <aside class="panel" id="panel" aria-live="polite"></aside>
   </main>
@@ -251,6 +307,8 @@ button, input { font: inherit; color: inherit; }
     ps: { name: "Psych & Soc" }
   };
   var SEC_ORDER = ["bb", "cp", "ps"];
+  // part-of stays in the data (breadcrumbs, subtopics, focus depth, paths) but is shown on
+  // the map by territories and halos, never as a line, so it is not a filterable link type.
   var REL = {
     "part-of":      { verb: "is part of",     help: "Belongs to a larger topic" },
     "prerequisite": { verb: "comes before",   help: "Learn this first" },
@@ -288,13 +346,14 @@ button, input { font: inherit; color: inherit; }
   var state = {
     hops: 1,
     sel: null,
-    mode: "overview",   // overview | focus | edge | path
+    mode: "overview",   // overview | focus | edge | path | pair
     focusSet: null,
     secOn: { bb: true, cp: true, ps: true },
     catOn: {},
     relOn: {}
   };
   Object.keys(REL).forEach(function (k) { state.relOn[k] = true; });
+  var LINK_TYPES = Object.keys(REL).filter(function (k) { return k !== "part-of"; });
   CATS.forEach(function (c) { state.catOn[c] = true; });
 
   function esc(s) {
@@ -365,7 +424,7 @@ button, input { font: inherit; color: inherit; }
   DATA.nodes.forEach(function (n) {
     elements.push({
       group: "nodes",
-      data: { id: n.id, label: n.title, section: n.section, disc: n.disc, size: nodeSize(n), base: nodeSize(n), fs: 12, tw: 110, tm: 3, tmn: -3, ow: 3, bw: 3, olw: 3 },
+      data: { id: n.id, label: n.title, section: n.section, disc: n.disc, size: nodeSize(n), base: nodeSize(n), fs: 12, tw: 110, tm: 3, tmn: -3, ow: 3, bw: 3, olw: 3, mp: 5, mpa: 7 },
       position: { x: pos[n.id].x, y: pos[n.id].y },
       classes: n.hub ? "hub" : "con nolbl"
     });
@@ -389,6 +448,7 @@ button, input { font: inherit; color: inherit; }
 
   function buildStyle() {
     var ink = T("--ink"), surf = T("--surface"), edge = T("--edge"), acc = T("--accent"), mut = T("--muted");
+    var il = T("--il") || "#c8326b", ilInk = T("--il-ink") || "#ffffff";
     var sc = { bb: T("--bb"), cp: T("--cp"), ps: T("--ps") };
     var body = T("--font-body") || "sans-serif";
     var disp = T("--font-display") || body;
@@ -416,9 +476,10 @@ button, input { font: inherit; color: inherit; }
       } },
       { selector: "edge", style: {
         "curve-style": "haystack", "haystack-radius": 0, "width": 1,
-        "line-color": edge, "opacity": 0.16
+        "line-color": edge, "opacity": 0.15
       } },
-      { selector: "edge[type = 'part-of']", style: { "opacity": 0.42, "width": 1.4 } },
+      // Links inside one topic recede; links between topics are the point of the map.
+      { selector: "edge.intra", style: { "opacity": 0.07 } },
       { selector: "node.dim", style: { "opacity": 0.16, "text-opacity": 0.45 } },
       { selector: "node.hub.dim", style: { "opacity": 0.3 } },
       { selector: "edge.dim", style: { "opacity": 0.035 } },
@@ -428,7 +489,6 @@ button, input { font: inherit; color: inherit; }
       } },
       { selector: "edge.hl[type = 'contrasts']", style: { "line-style": "dashed" } },
       { selector: "edge.hl[type = 'prerequisite']", style: { "line-style": "dotted", "width": 2.2 } },
-      { selector: "edge.hl[type = 'part-of']", style: { "line-color": mut, "target-arrow-color": mut, "opacity": 0.75 } },
       { selector: "edge.lbl", style: {
         "label": "data(verb)", "font-family": mono, "font-size": "data(fs)", "color": mut,
         "text-background-color": surf, "text-background-opacity": 1, "text-background-padding": 2,
@@ -446,6 +506,38 @@ button, input { font: inherit; color: inherit; }
       { selector: "node.lp-l", style: { "text-valign": "center", "text-halign": "left", "text-margin-y": 0, "text-margin-x": "data(tmn)", "text-justification": "right" } },
       { selector: "node.nolbl", style: { "label": "" } },
       { selector: "node.hover", style: { "label": "data(label)", "z-index": 30, "text-opacity": 1 } },
+      // Interleaving overlay: synthetic hub-to-partner connectors and marked partner hubs.
+      { selector: "edge.il", style: {
+        "curve-style": "unbundled-bezier", "control-point-distances": "data(cpd)", "control-point-weights": 0.5,
+        "line-color": il, "line-style": "dashed", "line-dash-pattern": function (e) { var k = e.data("k") || 1; return [7 * k, 5 * k]; },
+        "width": "data(w)", "opacity": 0.95, "z-index": 12, "events": "yes",
+        "label": "data(rank)", "font-family": mono, "font-weight": 500, "font-size": "data(fs)", "color": ilInk,
+        "text-background-color": il, "text-background-opacity": 1, "text-background-shape": "round-rectangle",
+        "text-background-padding": "data(tp)", "text-rotation": "none"
+      } },
+      { selector: "edge.il.ov", style: { "opacity": 0.34, "label": "", "z-index": 2 } },
+      { selector: "edge.il.ov.zin", style: { "display": "none" } },
+      { selector: "node.ilp", style: {
+        "label": "data(ilLabel)", "color": il, "font-weight": 700, "z-index": 25, "opacity": 1, "text-opacity": 1,
+        "outline-color": il, "outline-opacity": 1,
+        "underlay-color": il, "underlay-opacity": 0.2, "underlay-padding": "data(up)", "underlay-shape": "ellipse"
+      } },
+      { selector: "node.ilp.nolbl", style: { "label": "" } },
+      { selector: "node.ilsrc", style: { "opacity": 1, "text-opacity": 1 } },
+      // Membership: no lines, a halo in the section color. mem = belongs to the hub or concept
+      // in focus, anc = the focused concept's parent chain, sib = its siblings (lightly).
+      { selector: "node.mem, node.anc, node.sib", style: {
+        "underlay-color": secColor, "underlay-shape": "ellipse", "underlay-padding": "data(mp)", "underlay-opacity": 0.26
+      } },
+      { selector: "node.anc", style: { "underlay-opacity": 0.34, "underlay-padding": "data(mpa)", "opacity": 1, "text-opacity": 1 } },
+      { selector: "node.sib", style: { "underlay-opacity": 0.14 } },
+      { selector: "node.sib.dim", style: { "opacity": 0.55, "text-opacity": 0.8 } },
+      { selector: "node.hdim", style: { "opacity": 0.22, "text-opacity": 0.4 } },
+      { selector: "node.hub.hdim", style: { "opacity": 0.35 } },
+      { selector: "edge.hhl", style: { "opacity": 0.5, "width": 1.2, "z-index": 2 } },
+      { selector: "edge.hhl.intra", style: { "opacity": 0.22 } },
+      // "Is part of" is shown by territories and halos, never by a line.
+      { selector: "edge[type = 'part-of']", style: { "display": "none" } },
       { selector: ".off", style: { "display": "none" } }
     ];
   }
@@ -465,6 +557,10 @@ button, input { font: inherit; color: inherit; }
   var hubs = cy.nodes(".hub");
   var cons = cy.nodes(".con");
   var catNodes = cy.nodes(".cat");
+  // Everything from the data. Interleave connectors are added and removed later with class "il";
+  // these snapshots never include them, so filters, focus and the path finder ignore them.
+  var graphEls = cy.elements();
+  var realEdges = cy.edges();
 
   if (!hasLayout) {
     // No stored layout at all: lay the graph out live (slower, but always works).
@@ -489,6 +585,216 @@ button, input { font: inherit; color: inherit; }
   }
   placeCategoryLabels();
 
+  /* ---------- Topic territories ---------- */
+  // "Is part of" is never drawn as a line. Each topic hub owns a soft territory behind its
+  // members instead: a disc around every member, joined to its parent by a thick stroke.
+  // A section's territories are painted opaque into one offscreen canvas and composited at
+  // low alpha, so overlapping discs never stack into darker bubbles. Hover and focus raise
+  // single territories (or one branch of a topic) above the rest.
+  function rootHub(id) {
+    var a = ancestors(id), r = a.length ? a[0] : id;
+    return byId[r] && byId[r].hub ? r : null;
+  }
+  function subtree(id) {
+    var out = [id];
+    for (var i = 0; i < out.length; i++) kids[out[i]].forEach(function (k) { out.push(k); });
+    return out;
+  }
+  var TERR = {}, rootOf = {};
+  DATA.nodes.forEach(function (n) {
+    var h = rootHub(n.id);
+    rootOf[n.id] = h;
+    if (h) (TERR[h] = TERR[h] || []).push(n.id);
+  });
+  realEdges.forEach(function (e) {
+    var a = rootOf[e.data("source")];
+    if (a && a === rootOf[e.data("target")]) e.addClass("intra");
+  });
+  var EL = {}, MP = {};
+  concepts.forEach(function (n) { EL[n.id()] = n; MP[n.id()] = n.position(); });
+  var terrCv = $("terr"), terrCtx = terrCv.getContext("2d");
+  var terrOff = document.createElement("canvas"), offCtx = terrOff.getContext("2d");
+  var terrCol = {}, terrDark = false;
+  var terrHover = null;   // hub whose territory the pointer is over
+  state.emph = [];        // [{ids, a, ring}] territories raised by focus or pair view
+  function terrColors() {
+    SEC_ORDER.forEach(function (s) { terrCol[s] = T("--" + s); });
+    terrDark = (T("--bg") || "").toLowerCase() === "#0d1218";
+    terrVer++;
+  }
+  terrColors();
+  // Territory shape: the rounded convex hull of the visible members (in graph coordinates,
+  // cached per filter state) plus a disc under each member so large hubs stay covered.
+  var terrGen = 0;
+  function hullOf(ids) {
+    var pts = [];
+    ids.forEach(function (id) { var el = EL[id]; if (el && !el.hasClass("off")) pts.push([MP[id].x, MP[id].y, id]); });
+    pts.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+    if (pts.length < 3) return { pts: pts, hull: pts.slice() };
+    var cross = function (o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); };
+    var lo = [], up = [];
+    pts.forEach(function (p) { while (lo.length > 1 && cross(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); });
+    for (var i = pts.length - 1; i >= 0; i--) {
+      var p = pts[i];
+      while (up.length > 1 && cross(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop();
+      up.push(p);
+    }
+    lo.pop(); up.pop();
+    return { pts: pts, hull: lo.concat(up) };
+  }
+  function shapeOf(t) {
+    if (!t.shape || t.gen !== terrGen) { t.shape = hullOf(t.ids); t.gen = terrGen; }
+    return t.shape;
+  }
+  var TSHAPE = {};
+  Object.keys(TERR).forEach(function (h) { TSHAPE[h] = { ids: TERR[h] }; });
+  // Adds one territory to ctx in screen space; grow widens it by that many pixels.
+  function paintTerr(ctx, t, z, px, py, W, H, grow) {
+    var sh = shapeOf(t);
+    if (!sh.pts.length) return;
+    var pad = Math.max(9, Math.min(24, 24 * z)) + 6 * z + (grow || 0);
+    var x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    var hp = sh.hull.map(function (p) {
+      var x = p[0] * z + px, y = p[1] * z + py;
+      x1 = Math.min(x1, x); x2 = Math.max(x2, x); y1 = Math.min(y1, y); y2 = Math.max(y2, y);
+      return [x, y];
+    });
+    var big = pad + 40 * z;
+    if (x2 < -big || y2 < -big || x1 > W + big || y1 > H + big) return;
+    ctx.beginPath();
+    hp.forEach(function (p, i) { if (i) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); });
+    ctx.closePath();
+    ctx.lineWidth = 2 * pad;
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    sh.pts.forEach(function (p) {
+      var r = Math.max(pad, (EL[p[2]].data("base") / 2) * z + 4);
+      var x = p[0] * z + px, y = p[1] * z + py;
+      ctx.moveTo(x + r, y);
+      ctx.arc(x, y, r, 0, 6.2832);
+    });
+    ctx.fill();
+  }
+  // Territories are painted at half resolution (cheap, and the upscale softens their edges);
+  // only the hairline around a raised territory is painted at full resolution. Redraws are
+  // skipped when nothing that affects them changed since the last frame.
+  var LO = 0.5, terrLo = document.createElement("canvas"), loCtx = terrLo.getContext("2d");
+  var terrKey = "", terrEmph = null, terrVer = 0;
+  function drawTerr() {
+    var W = cy.width(), H = cy.height();
+    if (!W || !H) return;
+    var dpr = window.devicePixelRatio || 1;
+    var z = cy.zoom(), pan = cy.pan();
+    var key = [W, H, dpr, z, pan.x, pan.y, terrGen, terrVer, state.mode, terrHover].join("|");
+    if (key === terrKey && terrEmph === state.emph) return;
+    terrKey = key; terrEmph = state.emph;
+    var bw = Math.round(W * dpr), bh = Math.round(H * dpr);
+    if (terrCv.width !== bw || terrCv.height !== bh) {
+      terrCv.width = terrOff.width = bw;
+      terrCv.height = terrOff.height = bh;
+    }
+    var lw = Math.ceil(W * LO), lh = Math.ceil(H * LO);
+    if (terrLo.width !== lw || terrLo.height !== lh) { terrLo.width = lw; terrLo.height = lh; }
+    terrCtx.setTransform(1, 0, 0, 1, 0, 0);
+    terrCtx.clearRect(0, 0, bw, bh);
+    terrCtx.imageSmoothingEnabled = true;
+    [[loCtx, LO], [offCtx, dpr]].forEach(function (c) {
+      c[0].setTransform(c[1], 0, 0, c[1], 0, 0);
+      c[0].lineCap = "round";
+      c[0].lineJoin = "round";
+    });
+    var quiet = state.mode !== "overview";
+    var base = (terrDark ? 0.085 : 0.07) * (quiet ? 0.4 : 1);
+    function layer(ctx, cv, alpha, paint) {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.clearRect(0, 0, W, H);
+      paint();
+      terrCtx.globalAlpha = alpha;
+      terrCtx.drawImage(cv, 0, 0, bw, bh);
+    }
+    // One pass for every territory: each section in its own color, all composited at one alpha.
+    layer(loCtx, terrLo, base, function () {
+      Object.keys(TERR).forEach(function (h) {
+        loCtx.fillStyle = loCtx.strokeStyle = terrCol[byId[h].section];
+        paintTerr(loCtx, TSHAPE[h], z, pan.x, pan.y, W, H);
+      });
+    });
+    var raise = state.emph.slice();
+    if (terrHover && TERR[terrHover] && !raise.some(function (e) { return e.hub === terrHover; })) {
+      raise.push({ hub: terrHover, ids: TERR[terrHover], shape: TSHAPE[terrHover], a: quiet ? 0.06 : 0.1, ring: !quiet });
+    }
+    raise.forEach(function (e) {
+      var col = terrCol[byId[e.ids[0]].section];
+      var t = e.shape || e;
+      layer(loCtx, terrLo, (terrDark ? 1.25 : 1) * e.a, function () {
+        loCtx.fillStyle = loCtx.strokeStyle = col;
+        paintTerr(loCtx, t, z, pan.x, pan.y, W, H);
+      });
+      if (e.ring) {
+        // A hairline around the territory: the grown shape minus the shape.
+        layer(offCtx, terrOff, terrDark ? 0.5 : 0.42, function () {
+          offCtx.fillStyle = offCtx.strokeStyle = col;
+          paintTerr(offCtx, t, z, pan.x, pan.y, W, H, 1.25);
+          offCtx.globalCompositeOperation = "destination-out";
+          paintTerr(offCtx, t, z, pan.x, pan.y, W, H);
+        });
+      }
+    });
+    terrCtx.globalAlpha = 1;
+  }
+  cy.on("render", drawTerr);
+
+  // Halo classes for "belongs to", and the territories to raise, for a focused concept.
+  function membership(id) {
+    var out = { mem: cy.collection(), anc: cy.collection(), sib: cy.collection(), emph: [] };
+    var h = rootOf[id];
+    var add = function (key, ids) {
+      ids.forEach(function (x) { if (x !== id && EL[x] && !EL[x].hasClass("off")) out[key] = out[key].union(EL[x]); });
+    };
+    if (byId[id].hub) {
+      add("mem", TERR[id] || []);
+      if (TERR[id]) out.emph.push({ hub: id, ids: TERR[id], shape: TSHAPE[id], a: 0.12, ring: true });
+      return out;
+    }
+    add("mem", subtree(id));
+    add("anc", ancestors(id));
+    var par = byId[id].parent;
+    if (par && byId[par]) add("sib", kids[par]);
+    if (h) out.emph.push({ hub: h, ids: TERR[h], shape: TSHAPE[h], a: 0.06, ring: true });
+    // The branch the concept hangs from (its parent and siblings) is raised a step further.
+    if (par && par !== h) out.emph.push({ ids: subtree(par), shape: { ids: subtree(par) }, a: 0.11, ring: false });
+    return out;
+  }
+  function clearMembership() {
+    cy.batch(function () { cy.nodes(".mem, .anc, .sib").removeClass("mem anc sib"); });
+    state.emph = [];
+  }
+  // Hovering a hub in the overview lights up its members and quiets everything else.
+  // Only nodes are dimmed (edges are faint already); the topic's own links are raised instead.
+  var hoverHub = null, hoverEls = null, hoverTimer = null;
+  function setHoverHub(h) {
+    if (h === hoverHub) return;
+    cy.batch(function () {
+      if (hoverEls) {
+        hoverEls.dim.removeClass("hdim");
+        hoverEls.links.removeClass("hhl");
+        hoverEls.mem.removeClass("mem");
+        hoverEls = null;
+      }
+      hoverHub = h;
+      if (h) {
+        var mine = cy.collection();
+        TERR[h].forEach(function (id) { if (EL[id] && !EL[id].hasClass("off")) mine = mine.union(EL[id]); });
+        var links = mine.connectedEdges().not(".off");
+        hoverEls = { mem: mine.not(EL[h]), links: links, dim: concepts.not(mine).not(links.connectedNodes()).not(".off") };
+        hoverEls.mem.addClass("mem");
+        links.addClass("hhl");
+        hoverEls.dim.addClass("hdim");
+      }
+    });
+  }
+
   /* ---------- Labels: constant on-screen size, collision culling ---------- */
   var metrics = {};
   var measureCtx = document.createElement("canvas").getContext("2d");
@@ -498,7 +804,7 @@ button, input { font: inherit; color: inherit; }
       var kind = n.hasClass("hub") ? "hub" : n.hasClass("cat") ? "cat" : "con";
       var spec = LBL[kind];
       measureCtx.font = spec.font + (kind === "hub" ? disp : kind === "cat" ? mono : body);
-      var words = String(n.data("label")).split(/\s+/), lines = [], cur = "";
+      var words = String(n.data("ilLabel") || n.data("label")).split(/\s+/), lines = [], cur = "";
       words.forEach(function (w) {
         var tryLine = cur ? cur + " " + w : w;
         if (cur && measureCtx.measureText(tryLine).width > spec.max) { lines.push(cur); cur = w; }
@@ -520,12 +826,13 @@ button, input { font: inherit; color: inherit; }
     cy.batch(function () {
       // The hub ring stays visible when zoomed out: at least 1.5px gap and 2px ring on screen.
       hubs.data({ fs: LBL.hub.px * k, tw: LBL.hub.max * k, tm: 5 * k, tmn: -5 * k, ow: 3 * k,
-                  bw: Math.max(3, 1.5 * k), olw: Math.max(3, 2 * k) });
+                  bw: Math.max(3, 1.5 * k), olw: Math.max(3, 2 * k), mp: 6 * k, mpa: 8 * k });
       // Hubs never shrink below a readable dot on screen.
       applySizes();
-      cons.data({ fs: LBL.con.px * k, tw: LBL.con.max * k, tm: 3 * k, tmn: -3 * k, ow: 2.5 * k });
+      cons.data({ fs: LBL.con.px * k, tw: LBL.con.max * k, tm: 3 * k, tmn: -3 * k, ow: 2.5 * k, mp: 4.5 * k, mpa: 6.5 * k });
       catNodes.data({ fs: LBL.cat.px * k, tw: LBL.cat.max * k, tmn: -10 * k, ow: 4 * k });
       cy.edges(".lbl").data({ fs: LBL.edge * k });
+      ilScale(cy.edges(".il"), cy.nodes(".ilp"));
     });
   }
 
@@ -555,7 +862,10 @@ button, input { font: inherit; color: inherit; }
       focus.forEach(function (n) {
         add(n, n.id() === state.sel ? 1e6 : (n.hasClass("hub") ? 5e5 : 2e5) + deg[n.id()]);
       });
-      if (state.mode === "focus") hubs.forEach(function (n) { if (!focus.has(n)) add(n, 1e5 + kids[n.id()].length); });
+      if (state.mode === "focus") hubs.forEach(function (n) {
+        if (n.hasClass("ilp")) add(n, 8e5 - n.data("ilRank"));
+        else if (!focus.has(n)) add(n, 1e5 + kids[n.id()].length);
+      });
     } else {
       if (z < LBL.catZoom) catNodes.forEach(function (n) { add(n, 9e5); });
       hubs.forEach(function (n) { add(n, 5e5 + kids[n.id()].length * 10 + deg[n.id()]); });
@@ -638,11 +948,36 @@ button, input { font: inherit; color: inherit; }
     clearTimeout(vpTimer);
     vpTimer = setTimeout(refreshLabels, 90);
   });
-  cy.on("mouseover", "node", function (ev) { if (!ev.target.hasClass("cat")) ev.target.addClass("hover"); });
-  cy.on("mouseout", "node", function (ev) { ev.target.removeClass("hover"); });
+  cy.on("mouseover", "node", function (ev) {
+    var n = ev.target;
+    if (n.hasClass("cat")) return;
+    n.addClass("hover");
+    terrHover = rootOf[n.id()] || null;
+    // A short hover intent, so sweeping the pointer across the map does not flash topics.
+    clearTimeout(hoverTimer);
+    if (state.mode === "overview" && n.hasClass("hub")) {
+      hoverTimer = setTimeout(function () { if (state.mode === "overview") setHoverHub(n.id()); }, 70);
+    }
+    drawTerr();
+  });
+  // Leaving the canvas straight from a node fires no mouseout, so clear hover here too.
+  $("cy").addEventListener("mouseleave", function () {
+    clearTimeout(hoverTimer);
+    cy.nodes(".hover").removeClass("hover");
+    terrHover = null;
+    setHoverHub(null);
+    drawTerr();
+  });
+  cy.on("mouseout", "node", function (ev) {
+    ev.target.removeClass("hover");
+    clearTimeout(hoverTimer);
+    terrHover = null;
+    setHoverHub(null);
+    drawTerr();
+  });
 
   /* ---------- Theme ---------- */
-  function restyle() { cy.style(buildStyle()).update(); measureLabels(); cullLabels(); }
+  function restyle() { cy.style(buildStyle()).update(); terrColors(); measureLabels(); cullLabels(); drawTerr(); }
   try {
     var mq = window.matchMedia("(prefers-color-scheme: dark)");
     if (mq.addEventListener) mq.addEventListener("change", restyle);
@@ -653,6 +988,7 @@ button, input { font: inherit; color: inherit; }
   var resizeTimer = null;
   new ResizeObserver(function () {
     cy.resize();
+    drawTerr();
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(cullLabels, 120);
   }).observe($("cy"));
@@ -681,6 +1017,12 @@ button, input { font: inherit; color: inherit; }
   // Show the whole neighborhood when it fits at a readable zoom. Otherwise frame the
   // concept with its parent and subtopics, and let links to far regions run off screen.
   function fitFocus(n, set) {
+    // With interleaving on, bring the partner hubs into view too when that still reads well.
+    if (ilOn && state.ilMarked && state.ilMarked.length) {
+      var wide = set;
+      state.ilMarked.forEach(function (id) { wide = wide.union(cy.getElementById(id)); });
+      if (fitZoom(wide, 50, 1.3) >= 0.42) { fitTo(wide, 50, 1.3); return; }
+    }
     if (fitZoom(set, 50, 1.3) >= 0.55) { fitTo(set, 50, 1.3); return; }
     var core = n;
     var p = byId[n.id()].parent;
@@ -697,14 +1039,16 @@ button, input { font: inherit; color: inherit; }
 
   /* ---------- Focus, edges, paths ---------- */
   function clearHighlights() {
+    setHoverHub(null);
     cy.batch(function () { cy.elements(".dim, .hl, .lbl, .sel, .path").removeClass("dim hl lbl sel path"); });
+    clearMembership();
     state.focusSet = null;
     applySizes();
   }
   function neighborhood(n, hops) {
     var nodes = n, frontier = n;
     for (var i = 0; i < hops; i++) {
-      var next = frontier.connectedEdges().not(".off").connectedNodes().not(".off");
+      var next = frontier.connectedEdges().not(".off").not(".il").connectedNodes().not(".off");
       nodes = nodes.union(next);
       frontier = next;
     }
@@ -721,7 +1065,7 @@ button, input { font: inherit; color: inherit; }
 
   function highlight(set, edges, selId) {
     cy.batch(function () {
-      cy.elements().not(set).not(edges).not(".cat").addClass("dim");
+      graphEls.not(set).not(edges).not(".cat").addClass("dim");
       edges.addClass("hl");
       if (selId) {
         var sel = cy.getElementById(selId);
@@ -743,12 +1087,19 @@ button, input { font: inherit; color: inherit; }
     var n = cy.getElementById(id);
     if (!n.nonempty() || n.hasClass("off") || n.hasClass("cat")) return;
     hideHint();
+    clearOverlay();
     clearHighlights();
     state.sel = id;
     state.mode = "focus";
     var set = neighborhood(n, state.hops);
-    var edges = set.edgesWith(set).not(".off");
+    // Members and the parent chain stay lit and labelled; no part-of line is drawn.
+    var mb = membership(id);
+    set = set.union(mb.mem).union(mb.anc);
+    var edges = set.edgesWith(set).not(".off").not(".il");
+    cy.batch(function () { mb.mem.addClass("mem"); mb.anc.addClass("anc"); mb.sib.not(set).addClass("sib"); });
+    state.emph = mb.emph;
     highlight(set, edges, id);
+    drawInterleave();
     setEmpty(false);
     renderNode(id, pathInfo || null);
     fitFocus(n, set);
@@ -757,6 +1108,7 @@ button, input { font: inherit; color: inherit; }
 
   function showEdge(edge) {
     hideHint();
+    clearOverlay();
     clearHighlights();
     state.sel = null;
     state.mode = "edge";
@@ -768,9 +1120,11 @@ button, input { font: inherit; color: inherit; }
   }
 
   function clearFocus() {
+    clearOverlay();
     clearHighlights();
     state.sel = null;
     state.mode = "overview";
+    drawInterleave();
     setEmpty(true);
     renderIntro();
     fitAll();
@@ -779,13 +1133,14 @@ button, input { font: inherit; color: inherit; }
   }
 
   function findPath(fromId, toId) {
-    var vis = cy.elements().not(".off").not(".cat");
+    var vis = graphEls.not(".off").not(".cat");
     // Contrast links count as a longer step, so routes prefer links that explain or affect.
     var r = vis.aStar({
       root: cy.getElementById(fromId), goal: cy.getElementById(toId), directed: false,
       weight: function (e) { return e.data("type") === "contrasts" ? 1.6 : 1; }
     });
     if (!r.found) return { found: false, to: toId };
+    clearOverlay();
     clearHighlights();
     state.mode = "path";
     cy.batch(function () { r.path.addClass("path"); });
@@ -806,9 +1161,12 @@ button, input { font: inherit; color: inherit; }
 
   function renderIntro() {
     var hubCount = DATA.nodes.filter(function (n) { return n.hub; }).length;
-    var cross = 0;
-    DATA.edges.forEach(function (e) { if (byId[e.s].section !== byId[e.t].section) cross++; });
-    var legend = Object.keys(REL).map(function (k) {
+    var cross = 0, links = 0;
+    DATA.edges.forEach(function (e) {
+      if (e.type !== "part-of") links++;
+      if (byId[e.s].section !== byId[e.t].section) cross++;
+    });
+    var legend = LINK_TYPES.map(function (k) {
       return "<li><code>" + esc(k) + "</code><span>" + esc(REL[k].help) + "</span></li>";
     }).join("");
     var starts = STARTS.map(function (id) {
@@ -821,19 +1179,25 @@ button, input { font: inherit; color: inherit; }
       '<div class="eyebrow">Start here</div>' +
       "<h2>The MCAT on one map</h2>" +
       '<p class="summary">' + fmt(DATA.nodes.length) + " concepts from " + CATS.length + " subject areas. " +
-      fmt(hubCount) + " topic hubs anchor the map, and each one sits among its subtopics. " +
-      fmt(DATA.edges.length) + " links show how the ideas depend on each other.</p>" +
+      fmt(hubCount) + " topic hubs anchor the map, and each one sits in a shaded territory with its subtopics. " +
+      fmt(links) + " links show how the ideas depend on each other.</p>" +
       '<p class="summary">Zoom in to read every label. Click any concept to see its neighbors and the reason behind each link.</p>' +
+      '<p class="summary">Click any topic to see the three topics most worth studying alongside it, and why. Mixing related topics in one session makes each one easier to recall on test day.</p>' +
       (starts ? '<h3>Try one</h3><div class="starts">' + starts + "</div>" : "") +
       "<h3>Reading the map</h3>" +
       '<ul class="keys">' +
       '<li><span class="sym hub"></span><span>Topic hub. A main topic, ringed and larger.</span></li>' +
       '<li><span class="sym con"></span><span>Concept. Bigger dots have more links.</span></li>' +
-      '<li><span></span><span class="secs">' + secs + "</span></li></ul>" +
+      '<li><span class="sym grp"></span><span>Topic territory. The soft shading around a hub holds everything that is part of it.</span></li>' +
+      '<li><span class="sym mem"></span><span>Halo. Point at or click a topic and its members light up. Click a concept and the topics it belongs to light up.</span></li>' +
+      '<li><span></span><span class="secs">' + secs + "</span></li>" +
+      '<li><span class="sym il"></span><span>Interleave partner. A topic worth studying alongside the one you clicked, numbered by rank.</span></li>' +
+      '<li><span class="sym ildash"></span><span>Interleave line. Runs from your topic to each partner. Turn it off with the Interleaving button.</span></li>' +
+      '<li><span class="sym ildash faint"></span><span>Faint dashed lines in the overview join each topic to its best partner.</span></li></ul>' +
       "<h3>How links read</h3>" +
-      '<p class="note" style="margin:0 0 8px">Each link reads as a sentence from one concept to the next: A explains B, A affects B. Arrows show the direction when you focus a concept.</p>' +
+      '<p class="note" style="margin:0 0 8px">Each link reads as a sentence from one concept to the next: A explains B, A affects B. Arrows show the direction when you focus a concept. Belonging to a topic is shown by its territory, not by a line.</p>' +
       '<ul class="legend">' + legend + "</ul>" +
-      '<div class="stats">' + fmt(DATA.nodes.length) + " concepts · " + fmt(DATA.edges.length) + " links · " + fmt(cross) + " cross-section</div>";
+      '<div class="stats">' + fmt(DATA.nodes.length) + " concepts · " + fmt(links) + " links · " + fmt(cross) + " cross-section</div>";
     panel.scrollTop = 0;
   }
 
@@ -851,7 +1215,7 @@ button, input { font: inherit; color: inherit; }
     var out = [], inn = [];
     var childSet = {};
     kids[id].forEach(function (k) { childSet[k] = true; });
-    cy.getElementById(id).connectedEdges().not(".off").forEach(function (e) {
+    cy.getElementById(id).connectedEdges().not(".off").not(".il").forEach(function (e) {
       var d = e.data();
       // The breadcrumb and the subtopic list already show these part-of links.
       if (d.type === "part-of" && ((d.source === id && d.target === n.parent) || (d.target === id && childSet[d.source]))) return;
@@ -873,6 +1237,7 @@ button, input { font: inherit; color: inherit; }
       "<h2>" + esc(n.title) + "</h2>" +
       '<p class="summary">' + esc(n.summary) + "</p>" +
       (n.trap ? '<div class="trap"><b>Common trap</b>' + esc(n.trap) + "</div>" : "") +
+      interleaveSection(id) +
       (subs ? '<h3>Subtopics <span class="n">' + kids[id].length + '</span></h3><div class="starts subs">' + subs + "</div>" : "") +
       (out.length ? '<h3>Where it leads <span class="n">' + out.length + '</span></h3><ul class="links">' + out.join("") + "</ul>" : "") +
       (inn.length ? '<h3>What leads to it <span class="n">' + inn.length + '</span></h3><ul class="links">' + inn.join("") + "</ul>" : "") +
@@ -911,6 +1276,8 @@ button, input { font: inherit; color: inherit; }
     var go = ev.target.closest("[data-go]");
     if (go) { reveal(go.getAttribute("data-go")); focusNode(go.getAttribute("data-go")); return; }
     if (ev.target.closest("[data-clear]")) { clearFocus(); return; }
+    var pr = ev.target.closest("[data-pair]");
+    if (pr) { showPair(pr.getAttribute("data-from-hub"), pr.getAttribute("data-pair"), pr.getAttribute("data-back") || null); return; }
     if (ev.target.closest("#pathGo")) { runPath(); }
   });
   panel.addEventListener("keydown", function (ev) {
@@ -951,20 +1318,15 @@ button, input { font: inherit; color: inherit; }
 
   /* ---------- Graph events ---------- */
   cy.on("tap", "node", function (ev) { if (!ev.target.hasClass("cat")) focusNode(ev.target.id()); });
-  cy.on("tap", "edge", function (ev) { showEdge(ev.target); });
+  cy.on("tap", "edge", function (ev) {
+    var e = ev.target;
+    if (e.hasClass("il")) showPair(e.data("source"), e.data("target"), state.sel);
+    else showEdge(e);
+  });
   cy.on("tap", function (ev) { if (ev.target === cy && !$("stage").classList.contains("empty")) clearFocus(); });
 
   $("fit").addEventListener("click", function () { fitAll(); });
   $("reset").addEventListener("click", clearFocus);
-  document.querySelectorAll("[data-hops]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      state.hops = Number(b.getAttribute("data-hops"));
-      document.querySelectorAll("[data-hops]").forEach(function (x) {
-        x.setAttribute("aria-pressed", x === b ? "true" : "false");
-      });
-      if (state.sel) focusNode(state.sel);
-    });
-  });
 
   /* ---------- Filters ---------- */
   var filters = $("filters"), relrow = $("relrow"), catrow = $("catrow");
@@ -996,7 +1358,7 @@ button, input { font: inherit; color: inherit; }
   CATS.forEach(function (c) {
     catrow.appendChild(chip("data-cat", c, '<span class="dot ' + catSec[c] + '"></span>' + esc(c)));
   });
-  Object.keys(REL).forEach(function (k) { relrow.appendChild(chip("data-rel", k, esc(k), REL[k].help)); });
+  LINK_TYPES.forEach(function (k) { relrow.appendChild(chip("data-rel", k, esc(k), REL[k].help)); });
   function toggleMenu(menu, row, other, otherRow) {
     var open = row.hidden;
     row.hidden = !open;
@@ -1017,21 +1379,22 @@ button, input { font: inherit; color: inherit; }
       b.setAttribute("aria-pressed", state.relOn[b.getAttribute("data-rel")] ? "true" : "false");
     });
     var catOff = CATS.filter(function (c) { return !state.catOn[c]; }).length;
-    var relOff = Object.keys(REL).filter(function (k) { return !state.relOn[k]; }).length;
+    var relOff = LINK_TYPES.filter(function (k) { return !state.relOn[k]; }).length;
     catMenu.querySelector(".n").textContent = catOff ? (CATS.length - catOff) + "/" + CATS.length : "";
-    relMenu.querySelector(".n").textContent = relOff ? (Object.keys(REL).length - relOff) + "/" + Object.keys(REL).length : "";
+    relMenu.querySelector(".n").textContent = relOff ? (LINK_TYPES.length - relOff) + "/" + LINK_TYPES.length : "";
   }
 
   function nodeOn(sec, disc) { return state.secOn[sec] && state.catOn[disc]; }
   function applyFilters() {
     cy.batch(function () {
       cy.nodes().forEach(function (n) { n.toggleClass("off", !nodeOn(n.data("section"), n.data("disc"))); });
-      cy.edges().forEach(function (e) {
+      realEdges.forEach(function (e) {
         var hide = !state.relOn[e.data("type")] || e.source().hasClass("off") || e.target().hasClass("off");
         e.toggleClass("off", hide);
       });
     });
     syncChips();
+    terrGen++;
     if (state.sel && cy.getElementById(state.sel).hasClass("off")) { clearFocus(); }
     else if (state.sel) { focusNode(state.sel); }
     else if (state.mode !== "overview") { clearFocus(); }
@@ -1139,26 +1502,301 @@ button, input { font: inherit; color: inherit; }
   document.addEventListener("keydown", function (ev) {
     var tag = (ev.target.tagName || "").toLowerCase();
     if (ev.key === "/" && tag !== "input") { ev.preventDefault(); q.focus(); }
-    else if (ev.key === "Escape" && tag !== "input" && state.mode !== "overview") { clearFocus(); }
+    else if (ev.key === "Escape" && tag !== "input" && tag !== "select" && tag !== "textarea" && state.mode !== "overview") { clearFocus(); }
   });
   window.addEventListener("hashchange", function () {
     var id = decodeURIComponent((location.hash || "").slice(1));
     if (id && byId[id] && id !== state.sel) { reveal(id); focusNode(id); }
   });
 
+  /* ---------- Interleaving ---------- */
+  // Every hub has up to three partner hubs (the strongest of its curated five) worth studying alongside it, best first. The curated table
+  // (DATA.il.cur) wins; hubs it does not cover yet use link-analysis candidates (DATA.il.cand).
+  // The map overlay draws synthetic "il" edges that never mix with the graph data.
+  var IL = DATA.il || {};
+  var IL_CUR = IL.cur || {}, IL_CAND = IL.cand || {}, IL_HUB_OF = IL.hubOf || {};
+  var IL_N = 3;
+  var isHub = {};
+  DATA.nodes.forEach(function (n) { if (n.hub) isHub[n.id] = true; });
+  function title(id) { return byId[id] ? byId[id].title : id; }
+  function hubOf(id) {
+    if (isHub[id]) return id;
+    if (IL_HUB_OF[id] && isHub[IL_HUB_OF[id]]) return IL_HUB_OF[id];
+    var a = ancestors(id)[0];
+    return a && isHub[a] ? a : null;
+  }
+  var edgeIdx = {};
+  DATA.edges.forEach(function (e, i) { (edgeIdx[e.s + "|" + e.t] = edgeIdx[e.s + "|" + e.t] || []).push(i); });
+  // The most informative link between two concepts, in either direction.
+  function edgeBetween(a, b) {
+    var list = (edgeIdx[a + "|" + b] || []).concat(edgeIdx[b + "|" + a] || []);
+    list.sort(function (x, y) { return (DATA.edges[x].type === "part-of") - (DATA.edges[y].type === "part-of"); });
+    return list.length ? list[0] : null;
+  }
+  function bridgesOf(pairs) {
+    var out = [], seen = {};
+    (pairs || []).forEach(function (p) {
+      var i = edgeBetween(p[0], p[1]);
+      if (i == null || seen[i]) return;
+      seen[i] = 1;
+      out.push({ ei: i, s: DATA.edges[i].s, t: DATA.edges[i].t, verb: REL[DATA.edges[i].type].verb, why: DATA.edges[i].why });
+    });
+    return out;
+  }
+  var partnerCache = {};
+  // [{hub, why, bridges, suggested}] for a hub, at most three, best first.
+  function partnersOf(h) {
+    if (!h || !isHub[h]) return [];
+    if (partnerCache[h]) return partnerCache[h];
+    var out = [], seen = {};
+    seen[h] = 1;
+    (IL_CUR[h] || []).forEach(function (r) {
+      if (out.length >= IL_N || !isHub[r[0]] || seen[r[0]]) return;
+      seen[r[0]] = 1;
+      out.push({ hub: r[0], why: r[1] || "", bridges: bridgesOf(r[2]), suggested: false });
+    });
+    (IL_CAND[h] || []).forEach(function (r) {
+      if (out.length >= IL_N || !isHub[r[0]] || seen[r[0]]) return;
+      seen[r[0]] = 1;
+      var br = bridgesOf(r[1]), a = byId[h], b = byId[r[0]];
+      var why = b.title + " shares " + br.length + " link" + (br.length === 1 ? "" : "s") + " with " + a.title +
+        (a.section !== b.section ? ", crossing from " + SECTION[a.section].name + " to " + SECTION[b.section].name + "." : ", both in " + SECTION[a.section].name + ".");
+      out.push({ hub: r[0], why: why, bridges: br, suggested: true });
+    });
+    return (partnerCache[h] = out);
+  }
+
+  /* --- Toggle, remembered per browser --- */
+  var IL_KEY = "mcat-nexus-interleave";
+  var ilOn = true;
+  try { ilOn = window.localStorage.getItem(IL_KEY) !== "off"; } catch (e) { ilOn = true; }
+  var ilBtn = $("iltog");
+  function syncIlBtn() { ilBtn.setAttribute("aria-pressed", ilOn ? "true" : "false"); }
+  function setIlOn(on) {
+    ilOn = !!on;
+    try { window.localStorage.setItem(IL_KEY, ilOn ? "on" : "off"); } catch (e) {}
+    syncIlBtn();
+    if (state.mode === "focus" || state.mode === "overview") { clearOverlay(); drawInterleave(); cullLabels(); }
+  }
+  ilBtn.addEventListener("click", function () { setIlOn(!ilOn); });
+  syncIlBtn();
+
+  /* --- Map overlay --- */
+  // Connector width, dash, rank badge and halo keep a constant on-screen size.
+  function ilScale(edges, nodes) {
+    var k = 1 / cy.zoom();
+    edges.forEach(function (e) {
+      var ov = e.hasClass("ov");
+      e.data({ k: k, w: (ov ? 1.1 : 2.2) * k, fs: 11 * k, tp: 3 * k });
+    });
+    nodes.forEach(function (n) { n.data("up", 7 * k); });
+    // The overview lines step aside once concept labels appear.
+    edges.filter(".ov").toggleClass("zin", cy.zoom() >= LBL.conZoom);
+  }
+  function clearOverlay() {
+    cy.batch(function () {
+      cy.remove(cy.edges(".il"));
+      cy.nodes(".ilp").forEach(function (n) { n.removeClass("ilp"); n.removeData("ilLabel"); n.removeData("ilRank"); });
+      cy.nodes(".ilsrc").removeClass("ilsrc");
+    });
+    measureSome(state.ilMarked || []);
+    state.ilMarked = [];
+  }
+  function measureSome(ids) {
+    if (!ids.length) return;
+    var keep = {};
+    ids.forEach(function (id) { keep[id] = 1; });
+    var body = T("--font-body") || "sans-serif", disp = T("--font-display") || body;
+    ids.forEach(function (id) {
+      var n = cy.getElementById(id);
+      if (!n.nonempty()) return;
+      var kind = n.hasClass("hub") ? "hub" : "con", spec = LBL[kind];
+      measureCtx.font = spec.font + (kind === "hub" ? disp : body);
+      var words = String(n.data("ilLabel") || n.data("label")).split(/\s+/), lines = [], cur = "";
+      words.forEach(function (w) {
+        var t = cur ? cur + " " + w : w;
+        if (cur && measureCtx.measureText(t).width > spec.max) { lines.push(cur); cur = w; } else cur = t;
+      });
+      if (cur) lines.push(cur);
+      var wmax = 0;
+      lines.forEach(function (l) { wmax = Math.max(wmax, measureCtx.measureText(l).width); });
+      metrics[id] = { w: wmax + 6, h: lines.length * spec.px * 1.2 + 4, kind: kind };
+    });
+  }
+  function connector(a, b, rank, ov) {
+    var pa = a.position(), pb = b.position();
+    var d = Math.hypot(pa.x - pb.x, pa.y - pb.y);
+    return {
+      group: "edges",
+      data: { id: "il:" + a.id() + ":" + b.id(), source: a.id(), target: b.id(), rank: String(rank || ""), cpd: Math.min(0.16 * d, 260), k: 1, w: 1, fs: 11, tp: 3 },
+      classes: ov ? "il ov" : "il",
+      selectable: false
+    };
+  }
+  // Draws the overlay for the current mode. Callers clear the old overlay first.
+  function drawInterleave() {
+    if (!ilOn) return;
+    var add = [];
+    if (state.mode === "focus" && state.sel) {
+      var sel = cy.getElementById(state.sel), h = hubOf(state.sel);
+      if (!h) return;
+      var src = cy.getElementById(h);
+      if (src.hasClass("off")) src = sel;
+      var marked = [];
+      partnersOf(h).forEach(function (p, i) {
+        var n = cy.getElementById(p.hub);
+        if (!n.nonempty() || n.hasClass("off")) return;
+        n.addClass("ilp").removeClass("dim").data({ ilLabel: (i + 1) + " · " + n.data("label"), ilRank: i + 1 });
+        marked.push(p.hub);
+        if (!n.same(src)) add.push(connector(src, n, i + 1, false));
+      });
+      src.addClass("ilsrc").removeClass("dim");
+      state.ilMarked = marked;
+      measureSome(marked);
+    } else if (state.mode === "overview") {
+      var seen = {};
+      Object.keys(isHub).forEach(function (h) {
+        var p = partnersOf(h)[0];
+        if (!p) return;
+        var key = h < p.hub ? h + "|" + p.hub : p.hub + "|" + h;
+        if (seen[key]) return;
+        seen[key] = 1;
+        var a = cy.getElementById(h), b = cy.getElementById(p.hub);
+        if (a.hasClass("off") || b.hasClass("off")) return;
+        add.push(connector(a, b, 1, true));
+      });
+    }
+    if (!add.length) { if (state.mode === "focus") cullLabels(); return; }
+    var added = cy.add(add);
+    ilScale(added, cy.nodes(".ilp"));
+    if (state.mode === "focus") cullLabels();
+  }
+
+  /* --- Panel section --- */
+  function catChip(n) {
+    return '<span class="catchip"><span class="dot ' + esc(n.section) + '"></span>' + esc(n.disc) + "</span>";
+  }
+  function bridgeList(bridges) {
+    return '<ul class="bridges">' + bridges.map(function (b) {
+      return "<li><strong>" + esc(title(b.s)) + '</strong> <span class="v">→ ' + esc(b.verb) + " →</span> <strong>" + esc(title(b.t)) + "</strong>" +
+        (b.why ? '<span class="why">' + esc(b.why) + "</span>" : "") + "</li>";
+    }).join("") + "</ul>";
+  }
+  function interleaveSection(id) {
+    var h = hubOf(id);
+    var list = partnersOf(h);
+    if (!list.length) return "";
+    var allSug = list.every(function (p) { return p.suggested; });
+    var head = id === h
+      ? '<h3 class="il-h">Interleave with <span class="n">' + list.length + "</span></h3>"
+      : '<h3 class="il-h">Topics to mix with <b>' + esc(title(h)) + "</b></h3>";
+    var rows = list.map(function (p, i) {
+      var n = byId[p.hub], off = cy.getElementById(p.hub).hasClass("off");
+      var how = p.bridges.length
+        ? '<details class="il-how"><summary>How they connect (' + p.bridges.length + ")</summary>" + bridgeList(p.bridges) + "</details>"
+        : "";
+      return '<li class="il-row' + (off ? " off" : "") + '" data-il="' + esc(p.hub) + '"><span class="il-rank">' + (i + 1) + "</span><div>" +
+        '<div class="il-head"><button type="button" class="il-name" data-go="' + esc(p.hub) + '">' + esc(n.title) + "</button>" + catChip(n) +
+        (off ? '<span class="il-tag">hidden by filters</span>' : "") + "</div>" +
+        '<p class="why">' + esc(p.why) + "</p>" +
+        (p.suggested && !allSug ? '<p class="sug">suggested by link analysis</p>' : "") +
+        '<div class="il-tools"><button type="button" class="linkbtn" data-pair="' + esc(p.hub) + '" data-from-hub="' + esc(h) + '" data-back="' + esc(id) + '">Show together</button>' +
+        how + "</div></div></li>";
+    }).join("");
+    return head + (allSug ? '<p class="il-src">suggested by link analysis</p>' : "") + '<ol class="il-list">' + rows + "</ol>";
+  }
+
+  /* --- Show two hubs together --- */
+  function membersOf(h) {
+    var out = [];
+    DATA.nodes.forEach(function (n) { if (hubOf(n.id) === h) out.push(n.id); });
+    return out;
+  }
+  function showPair(h, p, back) {
+    if (!isHub[h] || !isHub[p]) return;
+    var info = partnersOf(h).filter(function (x) { return x.hub === p; })[0] ||
+               partnersOf(p).filter(function (x) { return x.hub === h; })[0] || { why: "", bridges: [] };
+    reveal(h); reveal(p);
+    hideHint();
+    clearOverlay();
+    clearHighlights();
+    state.sel = null;
+    state.mode = "pair";
+    state.pair = { h: h, p: p, back: back };
+    var inA = {}, inB = {};
+    membersOf(h).forEach(function (id) { inA[id] = 1; });
+    membersOf(p).forEach(function (id) { inB[id] = 1; });
+    var set = cy.collection(), edges = cy.collection();
+    Object.keys(inA).concat(Object.keys(inB)).forEach(function (id) { set = set.union(cy.getElementById(id)); });
+    set = set.not(".off");
+    // Bridging links: every link that crosses between the two topics, plus the curated ones.
+    realEdges.not(".off").forEach(function (e) {
+      var s = e.data("source"), t = e.data("target");
+      if ((inA[s] && inB[t]) || (inB[s] && inA[t])) edges = edges.union(e);
+    });
+    info.bridges.forEach(function (b) {
+      var e = cy.getElementById("e" + b.ei);
+      if (!e.hasClass("off")) { edges = edges.union(e); set = set.union(e.connectedNodes()); }
+    });
+    // Each topic's members carry its halo inside its raised territory; bridges are the only lines.
+    state.emph = [h, p].filter(function (x) { return TERR[x]; }).map(function (x) {
+      return { hub: x, ids: TERR[x], shape: TSHAPE[x], a: 0.1, ring: true };
+    });
+    highlight(set, edges, null);
+    cy.batch(function () {
+      set.filter(function (n) { return inA[n.id()] || inB[n.id()]; }).not(".hub").addClass("mem");
+      cy.getElementById(h).addClass("sel");
+      cy.getElementById(p).addClass("sel");
+    });
+    if (ilOn) {
+      var c = cy.add(connector(cy.getElementById(h), cy.getElementById(p), "", false));
+      ilScale(c, cy.collection());
+    }
+    applySizes();
+    cullLabels();
+    setEmpty(false);
+    renderPair(h, p, info, edges, back);
+    fitTo(cy.getElementById(h).union(cy.getElementById(p)).union(edges.connectedNodes()), 70, 1.2);
+  }
+  function renderPair(h, p, info, edges, back) {
+    var listed = {};
+    var rows = info.bridges.slice();
+    rows.forEach(function (b) { listed[b.ei] = 1; });
+    edges.forEach(function (e) {
+      var i = Number(e.id().slice(1));
+      if (listed[i]) return;
+      rows.push({ ei: i, s: e.data("source"), t: e.data("target"), verb: e.data("verb"), why: e.data("why") });
+    });
+    panel.innerHTML =
+      '<div class="panel-head"><div class="eyebrow">Interleave pair</div>' +
+      '<button type="button" class="close" data-clear="1">Close</button></div>' +
+      "<h2>" + esc(title(h)) + ' <span class="pair-h">with</span> ' + esc(title(p)) + "</h2>" +
+      (info.why ? '<p class="summary">' + esc(info.why) + "</p>" : "") +
+      (info.suggested ? '<p class="il-src" style="margin-top:6px">suggested by link analysis</p>' : "") +
+      '<h3>Bridging links <span class="n">' + rows.length + "</span></h3>" +
+      (rows.length ? bridgeList(rows) : '<p class="note">No direct links between these two topics with the current filters.</p>') +
+      '<div class="row">' +
+      (back && byId[back] ? '<button type="button" class="btn" data-go="' + esc(back) + '">Back to ' + esc(title(back)) + "</button>" : "") +
+      '<button type="button" class="btn" data-go="' + esc(p) + '">Open ' + esc(title(p)) + "</button></div>";
+    panel.scrollTop = 0;
+  }
+
   /* ---------- Init ---------- */
   var list = $("nodelist");
   list.innerHTML = DATA.nodes
     .slice().sort(function (a, b) { return a.title.localeCompare(b.title); })
     .map(function (n) { return '<option value="' + esc(n.title) + '"></option>'; }).join("");
-  $("counts").textContent = fmt(DATA.nodes.length) + " concepts · " + fmt(DATA.edges.length) + " links";
   syncChips();
   renderIntro();
   measureLabels();
   fitAll(false);
 
   var start = decodeURIComponent((location.hash || "").replace("#", ""));
+  // An old #today link, or any unknown id, just opens the map.
   if (start && byId[start]) focusNode(start);
-  window.__nexus = { cy: cy, state: state, ready: true };
+  else drawInterleave();
+  window.__nexus = { cy: cy, state: state, ready: true,
+    terr: { members: function (h) { return (TERR[h] || []).slice(); }, rootOf: function (id) { return rootOf[id]; }, draw: drawTerr },
+    il: { hubOf: hubOf, partnersOf: partnersOf, on: function () { return ilOn; }, set: setIlOn } };
 })();
 </script>
