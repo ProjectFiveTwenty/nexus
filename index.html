@@ -1177,12 +1177,12 @@ button, input { font: inherit; color: inherit; }
     }).join("");
     panel.innerHTML =
       '<div class="eyebrow">Start here</div>' +
-      "<h2>The MCAT on one map</h2>" +
-      '<p class="summary">' + fmt(DATA.nodes.length) + " concepts from " + CATS.length + " subject areas. " +
-      fmt(hubCount) + " topic hubs anchor the map, and each one sits in a shaded territory with its subtopics. " +
-      fmt(links) + " links show how the ideas depend on each other.</p>" +
-      '<p class="summary">Zoom in to read every label. Click any concept to see its neighbors and the reason behind each link.</p>' +
-      '<p class="summary">Click any topic to see the three topics most worth studying alongside it, and why. Mixing related topics in one session makes each one easier to recall on test day.</p>' +
+      "<h2>The MCAT, Connected</h2>" +
+      '<p class="summary">' + "Explore " + fmt(DATA.nodes.length) + " concepts across " + CATS.length + " subject areas. Navigate " + 
+      fmt(hubCount) + " topic hubs and " +
+      fmt(links) + " connections in an interactive map of MCAT knowledge.</p>" +
+      '<p class="summary">Zoom in to explore individual concepts. Select any node to discover its connections and why they matter.</p>' +
+      '<p class="summary">Select a topic to find the three concepts most worth studying alongside it. Interleaving related ideas can help you build a deeper understanding of the material.</p>' +
       (starts ? '<h3>Try one</h3><div class="starts">' + starts + "</div>" : "") +
       "<h3>Reading the map</h3>" +
       '<ul class="keys">' +
