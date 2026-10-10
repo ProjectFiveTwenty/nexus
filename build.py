@@ -299,6 +299,39 @@ def interleave_payload(nodes, edges):
     return {"hubOf": hub_of, "cur": curated, "cand": cand}
 
 
+def attach_meta(nodes):
+    """Copy aliases / also / beyond from data/node_meta.json (optional) onto the page's nodes.
+
+    Shape: {conceptId: {"aliases"?: [str], "also"?: ["bb"|"cp"|"ps"], "beyond"?: true}}.
+    Unknown ids are ignored; "also" drops the concept's own section and anything invalid.
+    """
+    meta = load_optional(ROOT / "data" / "node_meta.json")
+    if not isinstance(meta, dict):
+        return nodes
+    out, used = [], 0
+    live = {n["id"] for n in nodes}
+    unknown = sum(1 for k in meta if k not in live)
+    for n in nodes:
+        m = meta.get(n["id"])
+        if not isinstance(m, dict):
+            out.append(n)
+            continue
+        n = dict(n)
+        aliases = [a.strip() for a in m.get("aliases") or [] if isinstance(a, str) and a.strip()
+                   and a.strip().lower() != n["title"].lower()]
+        if aliases:
+            n["aliases"] = list(dict.fromkeys(aliases))
+        also = [s for s in m.get("also") or [] if s in SECTIONS and s != n.get("section")]
+        if also:
+            n["also"] = sorted(set(also), key=["bb", "cp", "ps"].index)
+        if m.get("beyond") is True:
+            n["beyond"] = True
+        used += 1
+        out.append(n)
+    print(f"node meta: {used} concept(s) annotated" + (f", {unknown} unknown id(s) ignored" if unknown else ""))
+    return out
+
+
 def main():
     nodes, edges = load("nodes.json"), load("edges.json")
     errors, warnings, stats = validate(nodes, edges)
@@ -323,6 +356,7 @@ def main():
     elif missing:
         print(f"note: {missing} concept(s) have no stored position; the page places them near their parent")
 
+    nodes = attach_meta(nodes)
     template = (ROOT / "viewer.template.html").read_text(encoding="utf-8")
     data = {"nodes": nodes, "edges": edges, "pos": pos}
     data["il"] = interleave_payload(nodes, edges)

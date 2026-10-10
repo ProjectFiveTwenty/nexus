@@ -105,6 +105,7 @@ button, input { font: inherit; color: inherit; }
 .results li[aria-selected="true"], .results li:hover { background: var(--soft); }
 .results .t { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results .t small { font: 500 10px var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-left: 6px; }
+.results .t .al { margin-left: 8px; font: 400 12px var(--font-body); color: var(--muted); }
 .results .d { margin-left: auto; font: 400 11px var(--font-mono); color: var(--muted); white-space: nowrap; flex: none; }
 .results .none { color: var(--muted); cursor: default; }
 .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
@@ -150,6 +151,10 @@ button, input { font: inherit; color: inherit; }
 .panel { min-width: 0; overflow: auto; border-left: 1px solid var(--line); padding: 18px 18px 22px; overscroll-behavior: contain; }
 .eyebrow { display: flex; align-items: center; gap: 8px; font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); min-width: 0; }
 .eyebrow .tag { padding: 1px 6px; border-radius: 4px; background: var(--soft); color: var(--ink); }
+.panel-head .eyebrow { flex-wrap: wrap; row-gap: 4px; }
+.eyebrow .also { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; text-transform: none; letter-spacing: 0; font: 400 12px var(--font-body); }
+.eyebrow .also .dot { width: 7px; height: 7px; margin-left: 3px; }
+.beyond { display: inline-block; margin: 0 0 8px; padding: 1px 8px; border-radius: 999px; border: 1px dashed var(--line); color: var(--muted); font: 400 11.5px/1.6 var(--font-body); cursor: help; }
 .crumbs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 4px; margin-top: 10px; font-size: 13px; color: var(--muted); }
 .crumbs button { border: 0; background: transparent; padding: 1px 4px; margin: 0 -4px; border-radius: 4px; cursor: pointer; color: var(--accent); }
 .crumbs button:hover { background: var(--soft); }
@@ -296,10 +301,12 @@ button, input { font: inherit; color: inherit; }
 <datalist id="nodelist"></datalist>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
+<!-- The graph is inlined as JSON text: JSON.parse reads it much faster than V8 compiles the same object literal. -->
+<script type="application/json" id="nexus-data">/*__GRAPH_DATA__*/null</script>
 <script>
 (function () {
   "use strict";
-  var DATA = /*__GRAPH_DATA__*/null;
+  var DATA = JSON.parse(document.getElementById("nexus-data").textContent);
 
   var SECTION = {
     bb: { name: "Bio & Biochem" },
@@ -362,6 +369,12 @@ button, input { font: inherit; color: inherit; }
     });
   }
   function $(id) { return document.getElementById(id); }
+  // A concept's own section first, then the other sections it is also tested in (node_meta.json).
+  function secsOf(n) {
+    var out = [n.section];
+    (n.also || []).forEach(function (s) { if (SECTION[s] && out.indexOf(s) < 0) out.push(s); });
+    return out;
+  }
   function T(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
   function hashStr(s) {
     var h = 2166136261;
@@ -424,23 +437,28 @@ button, input { font: inherit; color: inherit; }
   DATA.nodes.forEach(function (n) {
     elements.push({
       group: "nodes",
-      data: { id: n.id, label: n.title, section: n.section, disc: n.disc, size: nodeSize(n), base: nodeSize(n), fs: 12, tw: 110, tm: 3, tmn: -3, ow: 3, bw: 3, olw: 3, mp: 5, mpa: 7 },
+      data: { id: n.id, label: n.title, section: n.section, secs: secsOf(n), disc: n.disc, size: nodeSize(n), base: nodeSize(n), fs: 12, tw: 110, tm: 3, tmn: -3, ow: 3, bw: 3, olw: 3, mp: 5, mpa: 7 },
       position: { x: pos[n.id].x, y: pos[n.id].y },
-      classes: n.hub ? "hub" : "con nolbl"
+      classes: n.hub ? "hub txt" : "con nolbl"
     });
   });
+  // Links inside one topic (both ends under the same hub) are marked "intra" up front.
+  var hubRoot = {};
+  DATA.nodes.forEach(function (n) { hubRoot[n.id] = rootHub(n.id); });
   DATA.edges.forEach(function (e, i) {
+    var ra = hubRoot[e.s];
     elements.push({
       group: "edges",
-      data: { id: "e" + i, source: e.s, target: e.t, type: e.type, verb: REL[e.type].verb, why: e.why, fs: 10 }
+      data: { id: "e" + i, source: e.s, target: e.t, type: e.type, verb: REL[e.type].verb, why: e.why, fs: 10 },
+      classes: ra && ra === hubRoot[e.t] ? "intra" : ""
     });
   });
   CATS.forEach(function (c, i) {
     elements.push({
       group: "nodes",
-      data: { id: "__cat" + i, label: c.toUpperCase(), section: catSec[c], disc: c, size: 1, fs: 12, tw: 260, tm: 0, tmn: 0, ow: 3 },
+      data: { id: "__cat" + i, label: c.toUpperCase(), section: catSec[c], secs: [catSec[c]], disc: c, size: 1, fs: 12, tw: 260, tm: 0, tmn: 0, ow: 3 },
       position: { x: 0, y: 0 },
-      classes: "cat",
+      classes: "cat txt",
       selectable: false,
       grabbable: false
     });
@@ -458,12 +476,17 @@ button, input { font: inherit; color: inherit; }
       { selector: "node", style: {
         "background-color": secColor,
         "width": "data(size)", "height": "data(size)",
-        "label": "data(label)", "font-family": body, "font-size": "data(fs)", "font-weight": 500, "color": ink,
-        "text-valign": "bottom", "text-halign": "center", "text-margin-y": "data(tm)",
-        "text-wrap": "wrap", "text-max-width": "data(tw)",
-        "text-outline-color": surf, "text-outline-width": "data(ow)", "text-outline-opacity": 0.92,
         "border-width": 1.5, "border-color": surf, "z-index": 1,
-        "overlay-opacity": 0, "transition-property": "none"
+        "overlay-opacity": 0
+      } },
+      // Text properties only go to nodes whose label is showing ("txt" is set exactly when
+      // "nolbl" is not) or that are hovered. Most concepts carry no label, and every property
+      // set on a node costs style work at start and on every zoom step.
+      { selector: "node.txt, node.hover", style: {
+        "label": "data(label)", "font-family": body, "font-size": "data(fs)", "font-weight": 500, "color": ink,
+        "text-valign": "bottom", "text-margin-y": "data(tm)",
+        "text-wrap": "wrap", "text-max-width": "data(tw)",
+        "text-outline-color": surf, "text-outline-width": "data(ow)", "text-outline-opacity": 0.92
       } },
       { selector: "node.hub", style: {
         "font-family": disp, "font-weight": 700, "z-index": 5,
@@ -474,10 +497,9 @@ button, input { font: inherit; color: inherit; }
         "background-opacity": 0, "border-width": 0, "font-family": mono, "font-weight": 500,
         "color": secColor, "text-valign": "top", "text-margin-y": "data(tmn)", "z-index": 6, "events": "no"
       } },
-      { selector: "edge", style: {
-        "curve-style": "haystack", "haystack-radius": 0, "width": 1,
-        "line-color": edge, "opacity": 0.15
-      } },
+      // Properties that equal cytoscape's defaults (haystack curves with radius 0, centered
+      // labels, no transitions) are left out: each set property costs a pass on every element.
+      { selector: "edge", style: { "width": 1, "line-color": edge, "opacity": 0.15 } },
       // Links inside one topic recede; links between topics are the point of the map.
       { selector: "edge.intra", style: { "opacity": 0.07 } },
       { selector: "node.dim", style: { "opacity": 0.16, "text-opacity": 0.45 } },
@@ -546,7 +568,9 @@ button, input { font: inherit; color: inherit; }
     container: $("cy"),
     elements: elements,
     style: buildStyle(),
-    layout: { name: "preset" },
+    // No fit here: fitting measures every element's style before the labels are sized, and
+    // that whole style pass would then run again. fitAll() frames the map once it is set up.
+    layout: { name: "preset", fit: false },
     minZoom: 0.05,
     maxZoom: 3,
     boxSelectionEnabled: false,
@@ -575,12 +599,14 @@ button, input { font: inherit; color: inherit; }
 
   // Each category's name sits just above its region, centered on the region.
   function placeCategoryLabels() {
+    var acc = {};
+    concepts.forEach(function (n) {
+      var d = n.data("disc"), p = n.position(), a = acc[d] || (acc[d] = { n: 0, sx: 0, minY: Infinity });
+      a.n++; a.sx += p.x; a.minY = Math.min(a.minY, p.y - n.data("base") / 2);
+    });
     catNodes.forEach(function (c) {
-      var members = concepts.filter(function (n) { return n.data("disc") === c.data("disc"); });
-      if (!members.length) return;
-      var sx = 0, minY = Infinity;
-      members.forEach(function (n) { var p = n.position(); sx += p.x; minY = Math.min(minY, p.y - n.data("base") / 2); });
-      c.position({ x: sx / members.length, y: minY });
+      var a = acc[c.data("disc")];
+      if (a) c.position({ x: a.sx / a.n, y: a.minY });
     });
   }
   placeCategoryLabels();
@@ -600,15 +626,10 @@ button, input { font: inherit; color: inherit; }
     for (var i = 0; i < out.length; i++) kids[out[i]].forEach(function (k) { out.push(k); });
     return out;
   }
-  var TERR = {}, rootOf = {};
+  var TERR = {}, rootOf = hubRoot;
   DATA.nodes.forEach(function (n) {
-    var h = rootHub(n.id);
-    rootOf[n.id] = h;
+    var h = rootOf[n.id];
     if (h) (TERR[h] = TERR[h] || []).push(n.id);
-  });
-  realEdges.forEach(function (e) {
-    var a = rootOf[e.data("source")];
-    if (a && a === rootOf[e.data("target")]) e.addClass("intra");
   });
   var EL = {}, MP = {};
   concepts.forEach(function (n) { EL[n.id()] = n; MP[n.id()] = n.position(); });
@@ -796,25 +817,32 @@ button, input { font: inherit; color: inherit; }
   }
 
   /* ---------- Labels: constant on-screen size, collision culling ---------- */
-  var metrics = {};
+  // Label boxes are measured when the placer first needs them (most concept labels are not
+  // candidates in the zoomed-out overview) and kept until the label text or the fonts change.
+  var metrics = {}, lblFonts = null;
   var measureCtx = document.createElement("canvas").getContext("2d");
   function measureLabels() {
     var body = T("--font-body") || "sans-serif", disp = T("--font-display") || body, mono = T("--font-mono") || "monospace";
-    cy.nodes().forEach(function (n) {
-      var kind = n.hasClass("hub") ? "hub" : n.hasClass("cat") ? "cat" : "con";
-      var spec = LBL[kind];
-      measureCtx.font = spec.font + (kind === "hub" ? disp : kind === "cat" ? mono : body);
-      var words = String(n.data("ilLabel") || n.data("label")).split(/\s+/), lines = [], cur = "";
-      words.forEach(function (w) {
-        var tryLine = cur ? cur + " " + w : w;
-        if (cur && measureCtx.measureText(tryLine).width > spec.max) { lines.push(cur); cur = w; }
-        else cur = tryLine;
-      });
-      if (cur) lines.push(cur);
-      var wmax = 0;
-      lines.forEach(function (l) { wmax = Math.max(wmax, measureCtx.measureText(l).width); });
-      metrics[n.id()] = { w: wmax + 6, h: lines.length * spec.px * 1.2 + 4, kind: kind };
+    lblFonts = { hub: disp, cat: mono, con: body };
+    metrics = {};
+  }
+  function metricOf(n) {
+    var id = n.id();
+    if (metrics[id]) return metrics[id];
+    if (!lblFonts) measureLabels();
+    var kind = n.hasClass("hub") ? "hub" : n.hasClass("cat") ? "cat" : "con";
+    var spec = LBL[kind];
+    measureCtx.font = spec.font + lblFonts[kind];
+    var words = String(n.data("ilLabel") || n.data("label")).split(/\s+/), lines = [], cur = "";
+    words.forEach(function (w) {
+      var tryLine = cur ? cur + " " + w : w;
+      if (cur && measureCtx.measureText(tryLine).width > spec.max) { lines.push(cur); cur = w; }
+      else cur = tryLine;
     });
+    if (cur) lines.push(cur);
+    var wmax = 0;
+    lines.forEach(function (l) { wmax = Math.max(wmax, measureCtx.measureText(l).width); });
+    return (metrics[id] = { w: wmax + 6, h: lines.length * spec.px * 1.2 + 4, kind: kind });
   }
 
   var lastZoom = null;
@@ -911,7 +939,7 @@ button, input { font: inherit; color: inherit; }
       put({ x1: p.x - r, x2: p.x + r, y1: p.y - r, y2: p.y + r, id: n.id(), dot: !n.hasClass("hub") });
     });
     cand.forEach(function (c) {
-      var n = c.n, id = n.id(), m = metrics[id], p = n.renderedPosition();
+      var n = c.n, id = n.id(), m = metricOf(n), p = n.renderedPosition();
       if (!m) return;
       if (p.x < -200 || p.x > W + 200 || p.y < -100 || p.y > H + 100) return;
       var r = (n.data("size") / 2) * z + (m.kind === "hub" ? n.data("olw") * z : 0), g = m.kind === "hub" ? 5 : 3;
@@ -935,6 +963,7 @@ button, input { font: inherit; color: inherit; }
         if ((lblPos[id] || "") === want && n.hasClass("nolbl") === !want) return;
         lblPos[id] = want;
         n.toggleClass("nolbl", !want);
+        n.toggleClass("txt", !!want);
         n.toggleClass("lp-t", want === "t");
         n.toggleClass("lp-r", want === "r");
         n.toggleClass("lp-l", want === "l");
@@ -983,9 +1012,30 @@ button, input { font: inherit; color: inherit; }
     if (mq.addEventListener) mq.addEventListener("change", restyle);
   } catch (e) {}
   new MutationObserver(restyle).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(restyle);
+  // Web fonts change label widths, so the map is restyled once they arrive. When no font face
+  // finished loading after start (all were cached, or none could load) nothing changed and the
+  // full restyle is skipped.
+  function loadedFaces() {
+    var n = 0;
+    try { document.fonts.forEach(function (f) { if (f.status === "loaded") n++; }); } catch (e) {}
+    return n;
+  }
+  if (document.fonts && document.fonts.ready) {
+    var facesAtStart = loadedFaces();
+    document.fonts.ready.then(function () { if (loadedFaces() !== facesAtStart) restyle(); });
+  }
 
   var resizeTimer = null;
+  // Resize observers (cytoscape's own and ours) also fire once on start, at the size the
+  // map already has, and the panel calls resize on every focus. A resize at an unchanged
+  // size only redraws every element from scratch, so it is skipped.
+  var cyResize = cy.resize, lastDpr = window.devicePixelRatio || 1;
+  cy.resize = function () {
+    var box = $("cy"), dpr = window.devicePixelRatio || 1;
+    if (box.clientWidth === cy.width() && box.clientHeight === cy.height() && dpr === lastDpr) return cy;
+    lastDpr = dpr;
+    return cyResize.apply(cy, arguments);
+  };
   new ResizeObserver(function () {
     cy.resize();
     drawTerr();
@@ -996,8 +1046,27 @@ button, input { font: inherit; color: inherit; }
   /* ---------- Viewport helpers ---------- */
   function visibleConcepts() { return concepts.not(".off"); }
   // Fit eles into the canvas below the floating toolbar.
+  // The bounding box of many nodes comes from the few that can reach its edges, so the
+  // style of the rest is never computed just to frame the map. Margin covers borders and rings.
+  function nodesBB(eles) {
+    var opts = { includeLabels: false, includeOverlays: false };
+    if (eles.length < 60 || eles.edges().length) return eles.boundingBox(opts);
+    var m = 24 + 12 / cy.zoom(), ext = [];
+    var x1 = Infinity, x2 = -Infinity, y1 = Infinity, y2 = -Infinity;
+    eles.forEach(function (n) {
+      var p = n.position(), r = n.data("size") / 2;
+      var e = [p.x - r, p.x + r, p.y - r, p.y + r];
+      ext.push(e);
+      x1 = Math.min(x1, e[0]); x2 = Math.max(x2, e[1]); y1 = Math.min(y1, e[2]); y2 = Math.max(y2, e[3]);
+    });
+    var edge = eles.filter(function (n, i) {
+      var e = ext[i];
+      return e[0] < x1 + m || e[1] > x2 - m || e[2] < y1 + m || e[3] > y2 - m;
+    });
+    return edge.boundingBox(opts);
+  }
   function fitTo(eles, pad, maxZoom, animate, minZoom) {
-    var bb = eles.boundingBox({ includeLabels: false, includeOverlays: false });
+    var bb = nodesBB(eles);
     var W = cy.width(), H = cy.height();
     if (!W || !H || !isFinite(bb.w)) return;
     var top = Math.max(pad, document.querySelector(".tools").getBoundingClientRect().bottom - $("cy").getBoundingClientRect().top + 30);
@@ -1157,7 +1226,8 @@ button, input { font: inherit; color: inherit; }
 
   /* ---------- Panel rendering ---------- */
   var panel = $("panel");
-  function fmt(n) { return n.toLocaleString("en-US"); }
+  // Thousands separators as toLocaleString("en-US") writes them, without starting up ICU.
+  function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
 
   function renderIntro() {
     var hubCount = DATA.nodes.filter(function (n) { return n.hub; }).length;
@@ -1177,12 +1247,12 @@ button, input { font: inherit; color: inherit; }
     }).join("");
     panel.innerHTML =
       '<div class="eyebrow">Start here</div>' +
-      "<h2>The MCAT on one map</h2>" +
-      '<p class="summary">' + fmt(DATA.nodes.length) + " concepts from " + CATS.length + " subject areas. " +
-      fmt(hubCount) + " topic hubs anchor the map, and each one sits in a shaded territory with its subtopics. " +
-      fmt(links) + " links show how the ideas depend on each other.</p>" +
-      '<p class="summary">Zoom in to read every label. Click any concept to see its neighbors and the reason behind each link.</p>' +
-      '<p class="summary">Click any topic to see the three topics most worth studying alongside it, and why. Mixing related topics in one session makes each one easier to recall on test day.</p>' +
+      "<h2>The MCAT, Connected</h2>" +
+      '<p class="summary">' + "Explore " + fmt(DATA.nodes.length) + " concepts across " + CATS.length + " subject areas. Navigate " + 
+      fmt(hubCount) + " topic hubs and " +
+      fmt(links) + " connections in an interactive map of MCAT knowledge.</p>" +
+      '<p class="summary">Zoom in to explore individual concepts. Select any node to discover its connections and why they matter.</p>' +
+      '<p class="summary">Select a topic to find the three concepts most worth studying alongside it. Interleaving related ideas can help you build a deeper understanding of the material.</p>' +
       (starts ? '<h3>Try one</h3><div class="starts">' + starts + "</div>" : "") +
       "<h3>Reading the map</h3>" +
       '<ul class="keys">' +
@@ -1210,7 +1280,15 @@ button, input { font: inherit; color: inherit; }
       '<span class="why">' + esc(d.why) + "</span></button></li>";
   }
 
+  function alsoTag(n) {
+    var extra = secsOf(n).slice(1);
+    if (!extra.length) return "";
+    var names = extra.map(function (s) { return SECTION[s].name; });
+    return '<span class="also" title="Also tested in ' + esc(names.join(" and ")) + '">Also tested in' +
+      extra.map(function (s, i) { return '<span class="dot ' + s + '"></span>' + esc(names[i]); }).join("") + "</span>";
+  }
   function renderNode(id, pathInfo) {
+    fillNodeList();
     var n = byId[id];
     var out = [], inn = [];
     var childSet = {};
@@ -1231,10 +1309,11 @@ button, input { font: inherit; color: inherit; }
     }).join("");
     var html =
       '<div class="panel-head"><div class="eyebrow"><span class="dot ' + esc(n.section) + '"></span>' +
-      esc(SECTION[n.section].name) + (n.hub ? ' <span class="tag">Topic hub</span>' : "") + "</div>" +
+      esc(SECTION[n.section].name) + (n.hub ? ' <span class="tag">Topic hub</span>' : "") + alsoTag(n) + "</div>" +
       '<button type="button" class="close" data-clear="1">Close</button></div>' +
       '<nav class="crumbs" aria-label="Where this sits">' + crumbs + "</nav>" +
       "<h2>" + esc(n.title) + "</h2>" +
+      (n.beyond ? '<span class="beyond" title="Covered by common prep materials but not listed in the AAMC content outline.">Beyond the AAMC outline</span>' : "") +
       '<p class="summary">' + esc(n.summary) + "</p>" +
       (n.trap ? '<div class="trap"><b>Common trap</b>' + esc(n.trap) + "</div>" : "") +
       interleaveSection(id) +
@@ -1384,10 +1463,18 @@ button, input { font: inherit; color: inherit; }
     relMenu.querySelector(".n").textContent = relOff ? (LINK_TYPES.length - relOff) + "/" + LINK_TYPES.length : "";
   }
 
-  function nodeOn(sec, disc) { return state.secOn[sec] && state.catOn[disc]; }
+  // Visible when any of its sections is switched on (its own or an "also" section) and its category is on.
+  function nodeOn(secs, disc) {
+    return state.catOn[disc] && secs.some(function (s) { return state.secOn[s]; });
+  }
   function applyFilters() {
     cy.batch(function () {
-      cy.nodes().forEach(function (n) { n.toggleClass("off", !nodeOn(n.data("section"), n.data("disc"))); });
+      concepts.forEach(function (n) { n.toggleClass("off", !nodeOn(n.data("secs"), n.data("disc"))); });
+      // A category name stays while any of its concepts is still on the map.
+      catNodes.forEach(function (c) {
+        var d = c.data("disc");
+        c.toggleClass("off", !concepts.some(function (n) { return n.data("disc") === d && !n.hasClass("off"); }));
+      });
       realEdges.forEach(function (e) {
         var hide = !state.relOn[e.data("type")] || e.source().hasClass("off") || e.target().hasClass("off");
         e.toggleClass("off", hide);
@@ -1403,7 +1490,7 @@ button, input { font: inherit; color: inherit; }
   // Make sure a concept the reader asks for is visible.
   function reveal(id) {
     var n = byId[id];
-    if (!n || nodeOn(n.section, n.disc)) return;
+    if (!n || nodeOn(secsOf(n), n.disc)) return;
     state.secOn[n.section] = true;
     state.catOn[n.disc] = true;
     applyFilters();
@@ -1433,14 +1520,29 @@ button, input { font: inherit; color: inherit; }
   /* ---------- Search ---------- */
   var q = $("q"), results = $("results"), active = -1, shown = [];
   var lower = DATA.nodes.map(function (n) {
-    return { n: n, t: n.title.toLowerCase(), s: (n.summary || "").toLowerCase(), w: n.title.toLowerCase().split(/[\s\-–—/(),.:;']+/) };
+    return { n: n, t: n.title.toLowerCase(), s: (n.summary || "").toLowerCase(), w: words(n.title),
+             al: (n.aliases || []).map(function (a) { return { a: a, t: a.toLowerCase(), w: words(a) }; }) };
   });
-  function score(r, term) {
-    var t = r.t;
+  function words(s) { return s.toLowerCase().split(/[\s\-–—/(),.:;']+/); }
+  // Title-style tiers: exact, prefix, word prefix, substring.
+  function textScore(t, w, term) {
     if (t === term) return 1000;
     if (t.indexOf(term) === 0) return 900;
-    if (r.w.some(function (w) { return w.indexOf(term) === 0; })) return 800;
+    if (w.some(function (x) { return x.indexOf(term) === 0; })) return 800;
     if (t.indexOf(term) > -1) return 700;
+    return 0;
+  }
+  // Returns {s, alias}: an alias match ranks just below the same kind of title match.
+  function score(r, term) {
+    var best = textScore(r.t, r.w, term), alias = null;
+    r.al.forEach(function (a) {
+      var v = textScore(a.t, a.w, term);
+      if (v && v - 15 > best) { best = v - 15; alias = a.a; }
+    });
+    if (best) return { s: best, alias: alias };
+    return { s: scoreRest(r, term), alias: null };
+  }
+  function scoreRest(r, term) {
     if (r.n.id.indexOf(term) > -1) return 600;
     if (r.n.disc.toLowerCase().indexOf(term) === 0 && r.n.hub) return 500;
     var i = r.s.indexOf(term);
@@ -1457,14 +1559,19 @@ button, input { font: inherit; color: inherit; }
     var term = q.value.trim().toLowerCase();
     if (!term) { closeResults(); return; }
     shown = lower
-      .map(function (r) { return { n: r.n, s: score(r, term) }; })
+      .map(function (r) { var sc = score(r, term); return { n: r.n, s: sc.s, alias: sc.alias }; })
       .filter(function (r) { return r.s > 0; })
       .sort(function (a, b) { return b.s - a.s || (b.n.hub ? 1 : 0) - (a.n.hub ? 1 : 0) || a.n.title.localeCompare(b.n.title); })
-      .slice(0, 10).map(function (r) { return r.n; });
+      .slice(0, 10);
+    var hits = shown;
+    shown = hits.map(function (r) { return r.n; });
     results.innerHTML = shown.length
-      ? shown.map(function (n, i) {
+      ? hits.map(function (r, i) {
+          var n = r.n;
           return '<li role="option" id="opt' + i + '" data-i="' + i + '" aria-selected="' + (i === active) + '"><span class="dot ' + n.section +
-            '"></span><span class="t">' + esc(n.title) + (n.hub ? "<small>hub</small>" : "") + '</span><span class="d">' + esc(n.disc) + "</span></li>";
+            '"></span><span class="t">' + esc(n.title) + (n.hub ? "<small>hub</small>" : "") +
+            (r.alias ? '<span class="al">matches: ' + esc(r.alias) + "</span>" : "") +
+            '</span><span class="d">' + esc(n.disc) + "</span></li>";
         }).join("")
       : '<li class="none">No concept matches that.</li>';
     results.hidden = false;
@@ -1602,26 +1709,9 @@ button, input { font: inherit; color: inherit; }
     measureSome(state.ilMarked || []);
     state.ilMarked = [];
   }
+  // Partner labels gain or lose their rank prefix, so their boxes are measured again.
   function measureSome(ids) {
-    if (!ids.length) return;
-    var keep = {};
-    ids.forEach(function (id) { keep[id] = 1; });
-    var body = T("--font-body") || "sans-serif", disp = T("--font-display") || body;
-    ids.forEach(function (id) {
-      var n = cy.getElementById(id);
-      if (!n.nonempty()) return;
-      var kind = n.hasClass("hub") ? "hub" : "con", spec = LBL[kind];
-      measureCtx.font = spec.font + (kind === "hub" ? disp : body);
-      var words = String(n.data("ilLabel") || n.data("label")).split(/\s+/), lines = [], cur = "";
-      words.forEach(function (w) {
-        var t = cur ? cur + " " + w : w;
-        if (cur && measureCtx.measureText(t).width > spec.max) { lines.push(cur); cur = w; } else cur = t;
-      });
-      if (cur) lines.push(cur);
-      var wmax = 0;
-      lines.forEach(function (l) { wmax = Math.max(wmax, measureCtx.measureText(l).width); });
-      metrics[id] = { w: wmax + 6, h: lines.length * spec.px * 1.2 + 4, kind: kind };
-    });
+    ids.forEach(function (id) { delete metrics[id]; });
   }
   function connector(a, b, rank, ov) {
     var pa = a.position(), pb = b.position();
@@ -1782,10 +1872,19 @@ button, input { font: inherit; color: inherit; }
   }
 
   /* ---------- Init ---------- */
-  var list = $("nodelist");
-  list.innerHTML = DATA.nodes
-    .slice().sort(function (a, b) { return a.title.localeCompare(b.title); })
-    .map(function (n) { return '<option value="' + esc(n.title) + '"></option>'; }).join("");
+  // The path finder's suggestion list is only needed once a concept is open, so it is filled
+  // after the first frame (or right away if a concept opens first).
+  var nodeListDone = false;
+  function fillNodeList() {
+    if (nodeListDone) return;
+    nodeListDone = true;
+    $("nodelist").innerHTML = DATA.nodes
+      .slice().sort(function (a, b) { return a.title.localeCompare(b.title); })
+      .map(function (n) { return '<option value="' + esc(n.title) + '"></option>'; }).join("");
+  }
+  setTimeout(function () {
+    (window.requestIdleCallback || function (f) { return setTimeout(f, 0); })(fillNodeList, { timeout: 2000 });
+  }, 1500);
   syncChips();
   renderIntro();
   measureLabels();
@@ -1795,6 +1894,20 @@ button, input { font: inherit; color: inherit; }
   // An old #today link, or any unknown id, just opens the map.
   if (start && byId[start]) focusNode(start);
   else drawInterleave();
+  // Settle every element's style and bounds now, in one pass. Left to the first frame, the
+  // renderer measures them while drawing, which marks them all dirty again and makes the
+  // next frame repeat the whole pass.
+  cy.elements().boundingBox();
+  // Cytoscape paints its very first frame from one-off layer bitmaps; every later redraw draws
+  // the elements directly, a subpixel-sharper image. The page used to get that redraw from its
+  // font restyle about a second in. Toggling a class no rule uses on the category labels asks
+  // for the same redraw at a fraction of the cost; it waits until the start-up burst is over
+  // (any hover, zoom or click redraws sooner anyway).
+  cy.one("render", function () {
+    setTimeout(function () {
+      (window.requestIdleCallback || setTimeout)(function () { catNodes.addClass("rf"); catNodes.removeClass("rf"); });
+    }, 300);
+  });
   window.__nexus = { cy: cy, state: state, ready: true,
     terr: { members: function (h) { return (TERR[h] || []).slice(); }, rootOf: function (id) { return rootOf[id]; }, draw: drawTerr },
     il: { hubOf: hubOf, partnersOf: partnersOf, on: function () { return ilOn; }, set: setIlOn } };
