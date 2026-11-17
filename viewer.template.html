@@ -634,6 +634,31 @@ button, input { font: inherit; color: inherit; }
     selectionType: "single",
     autoungrabify: true
   });
+
+  // Scroll-to-zoom. Cytoscape's own wheel zoom moves about 2.5x per mouse-wheel click on
+  // Windows (more with display scaling), so the map handles the wheel itself, with the rates
+  // d3-zoom uses: ZOOM_PER_CLICK per wheel click, proportional for trackpad scrolling, and
+  // faster for trackpad pinches (which arrive as ctrl+wheel with small deltas).
+  // Touch pinch on phones and Safari's trackpad gestures are separate events and unaffected.
+  (function () {
+    var ZOOM_PER_CLICK = 1.15;   // raise for faster zooming, lower for slower
+    var PINCH_SPEEDUP = 10;
+    var box = $("cy");
+    box.parentNode.addEventListener("wheel", function (e) {
+      if (!box.contains(e.target)) return;
+      e.preventDefault();
+      e.stopPropagation();   // keep the event from reaching Cytoscape's own wheel handler
+      var px = e.deltaY * (e.deltaMode === 1 ? 25 : e.deltaMode === 2 ? 500 : 1);
+      if (!px) return;
+      px = Math.max(-100, Math.min(100, px)) * (e.ctrlKey ? PINCH_SPEEDUP : 1);
+      var r = box.getBoundingClientRect();
+      cy.zoom({
+        level: cy.zoom() * Math.pow(ZOOM_PER_CLICK, -px / 100),
+        renderedPosition: { x: e.clientX - r.left, y: e.clientY - r.top }
+      });
+    }, { capture: true, passive: false });
+  })();
+
   var concepts = cy.nodes().not(".cat");
   var hubs = cy.nodes(".hub");
   var cons = cy.nodes(".con");
