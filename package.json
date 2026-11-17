@@ -6,7 +6,10 @@
   "scripts": {
     "layout": "node tools/layout.mjs",
     "build": "python3 build.py",
-    "check-page": "node tools/check-page.mjs"
+    "check-page": "node tools/check-page.mjs",
+    "app:bundle": "python3 app_bundle.py",
+    "app:sync": "python3 app_bundle.py && npx cap sync ios",
+    "app:open": "npx cap open ios"
   },
   "devDependencies": {
     "cytoscape": "3.30.2",

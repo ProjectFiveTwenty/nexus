@@ -1,5 +1,19 @@
 <meta charset="utf-8">
 <title>PROJECT520 Nexus</title>
+<!-- Phones and the iOS app: lay out at device width (without this, iPhone Safari renders the
+     desktop layout at 980px and shrinks it), and let the page reach under the notch so the
+     safe-area padding below can place it. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="An interactive map of 856 MCAT concepts and how they connect, with interleaving partners for every topic.">
+<meta name="theme-color" content="#f3f5f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1218" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nexus">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -70,14 +84,21 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   margin: 0;
-  padding-inline: 16px;
-  padding-block: 12px;
+  /* 100dvh tracks Safari's toolbars, so the bottom of the map is never hidden behind them. */
+  height: 100dvh;
+  /* env() is the notch / home-indicator inset on iPhones (0 everywhere else). */
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+           max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background: var(--bg);
   color: var(--ink);
   font: 14px/1.5 var(--font-body);
   overflow-x: hidden;
+  /* A one-screen app: no rubber-band bounce or pull-to-refresh when dragging the map. */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
 }
 button, input { font: inherit; color: inherit; }
 [hidden] { display: none !important; }
@@ -247,7 +268,10 @@ button, input { font: inherit; color: inherit; }
 .pair-h { color: var(--muted); font-weight: 600; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
 @media (max-width: 820px) {
-  body { padding-inline: 12px; padding-block: 10px; }
+  body {
+    padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+             max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  }
   .app { gap: 10px; }
   .bar { gap: 8px 12px; }
   .search { flex-basis: 100%; max-width: none; order: 3; }
@@ -269,11 +293,30 @@ button, input { font: inherit; color: inherit; }
 }
 @media (min-width: 821px) { .close.mobile-only { display: none; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+/* Touch screens (phones, iPads, the iOS app) */
+@media (hover: none) and (pointer: coarse) {
+  /* iOS zooms the whole page when focusing an input under 16px. */
+  .search input { font-size: 16px; }
+  /* No double-tap-to-zoom delay on controls. */
+  button, a, .chip, .results li { touch-action: manipulation; }
+  .tools .btn, .seg button { min-height: 34px; }
+  .results li { padding-block: 10px; }
+  .panel { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+}
+@media (max-width: 820px) {
+  .panel { max-height: 48dvh; }
+}
+/* Project 520 links */
+.brand a { color: inherit; text-decoration: none; }
+.brand a:hover { color: var(--accent); }
+.p520-top { margin-left: auto; white-space: nowrap; background: var(--accent); color: var(--accent-ink); text-decoration: none; font-weight: 600; font-size: 14px; padding: 7px 14px; border-radius: 8px; }
+.p520-top:hover { filter: brightness(1.08); }
+@media (max-width: 820px) { .p520-top { font-size: 13px; padding: 6px 11px; } }
 </style>
 
 <div class="app" id="app">
   <header class="bar">
-    <div class="brand">PROJECT520 Nexus</div>
+    <div class="brand"><a href="/" title="Project 520 home">PROJECT520</a> Nexus</div>
     <div class="search">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14" stroke-linecap="round"/></svg>
       <input id="q" type="search" placeholder="Search concepts  ( / )" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="results" aria-autocomplete="list" aria-label="Search concepts">
@@ -299,6 +342,20 @@ button, input { font: inherit; color: inherit; }
   </main>
 </div>
 <datalist id="nodelist"></datalist>
+<script>
+// Touch screens get touch wording in the hint (it shows on iPads; phones hide it).
+// The service worker keeps the Nexus working offline once installed to the home screen. It only
+// registers over https (GitHub Pages) or localhost, so file:// previews and the iOS app skip it.
+(function () {
+  var h = document.getElementById("hint");
+  if (h && window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
+    h.textContent = "Tap a topic to focus it. Pinch to zoom, drag to pan.";
+  }
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+  }
+})();
+</script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
 <!-- The graph is inlined as JSON text: JSON.parse reads it much faster than V8 compiles the same object literal. -->

@@ -1,0 +1,10 @@
+{
+  "appId": "com.projectfivetwenty.nexus",
+  "appName": "P520 Nexus",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "preferredContentMode": "mobile"
+  }
+}
